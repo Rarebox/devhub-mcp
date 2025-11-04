@@ -1,12 +1,14 @@
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events';
 import { McpServer, ServerStatus, DevHubState } from './types';
+import { GitHubMcpServer } from './mcp-servers/github';
 
 export class McpManager extends EventEmitter {
     private servers: Map<string, McpServer> = new Map();
     private activeConnections: Map<string, any> = new Map();
     private context: vscode.ExtensionContext;
     private state: DevHubState;
+    private githubServer: GitHubMcpServer | null = null;
 
     constructor(context: vscode.ExtensionContext) {
         super();
@@ -63,54 +65,58 @@ export class McpManager extends EventEmitter {
         try {
             const server = this.servers.get(serverId);
             if (!server) {
-                throw new Error(`Server with id ${serverId} not found`);
+                console.error(`Server not found: ${serverId}`);
+                return false;
             }
 
-            if (server.status === ServerStatus.Connected) {
-                console.log(`Server ${serverId} is already connected`);
-                return true;
+            console.log(`Connecting to ${server.name}...`);
+            server.status = ServerStatus.Connecting;
+            this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connecting });
+
+            // GitHub için gerçek connection
+            if (server.type === 'github') {
+                // Token al
+                const token = await this.getGitHubToken();
+                if (!token) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                // GitHub server instance oluştur
+                this.githubServer = new GitHubMcpServer();
+                const connected = await this.githubServer.connect(token);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.githubServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.githubServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
             }
 
-            // Update status to connecting
-            server.status = ServerStatus.Connected; // For now, directly set to connected
-            server.lastConnected = new Date();
-            server.error = undefined;
-
-            // Simulate connection process
-            console.log(`Connecting to server: ${serverId}...`);
-            
-            // Simulate async connection (in real implementation, this would be actual connection logic)
+            // Diğer servisler için simülasyon (şimdilik)
             await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Store active connection (placeholder for actual connection object)
-            this.activeConnections.set(serverId, {
-                connected: true,
-                connectedAt: new Date()
-            });
-
-            // Update state
-            this.servers.set(serverId, server);
-            this.state.servers = Array.from(this.servers.values());
-            this.saveState();
-
-            this.emit('serverStatusChanged', server);
-            console.log(`Successfully connected to server: ${serverId}`);
+            server.status = ServerStatus.Connected;
+            this.activeConnections.set(serverId, { type: server.type, connected: true });
             
+            console.log(`Successfully connected to ${server.name}`);
+            this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
             return true;
+
         } catch (error) {
-            console.error(`Failed to connect to server ${serverId}:`, error);
-            
-            // Update server status to error
+            console.error(`Error connecting to server ${serverId}:`, error);
             const server = this.servers.get(serverId);
             if (server) {
                 server.status = ServerStatus.Error;
-                server.error = error instanceof Error ? error.message : 'Unknown error';
-                this.servers.set(serverId, server);
-                this.state.servers = Array.from(this.servers.values());
-                this.saveState();
-                this.emit('serverStatusChanged', server);
+                this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
             }
-            
             return false;
         }
     }
@@ -119,37 +125,26 @@ export class McpManager extends EventEmitter {
         try {
             const server = this.servers.get(serverId);
             if (!server) {
-                throw new Error(`Server with id ${serverId} not found`);
-            }
-
-            if (server.status === ServerStatus.Disconnected) {
-                console.log(`Server ${serverId} is already disconnected`);
+                console.error(`Server not found: ${serverId}`);
                 return;
             }
 
-            console.log(`Disconnecting from server: ${serverId}...`);
+            console.log(`Disconnecting from ${server.name}...`);
 
-            // Close active connection
-            const connection = this.activeConnections.get(serverId);
-            if (connection) {
-                // In real implementation, this would close the actual connection
-                this.activeConnections.delete(serverId);
+            // GitHub için gerçek disconnect
+            if (server.type === 'github' && this.githubServer) {
+                await this.githubServer.disconnect();
+                this.githubServer = null;
             }
 
-            // Update server status
             server.status = ServerStatus.Disconnected;
-            server.error = undefined;
-
-            // Update state
-            this.servers.set(serverId, server);
-            this.state.servers = Array.from(this.servers.values());
-            this.saveState();
-
-            this.emit('serverStatusChanged', server);
-            console.log(`Successfully disconnected from server: ${serverId}`);
+            this.activeConnections.delete(serverId);
+            
+            console.log(`Disconnected from ${server.name}`);
+            this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+            
         } catch (error) {
-            console.error(`Failed to disconnect from server ${serverId}:`, error);
-            throw error;
+            console.error(`Error disconnecting from server ${serverId}:`, error);
         }
     }
 
@@ -244,5 +239,29 @@ export class McpManager extends EventEmitter {
         } catch (error) {
             console.error('Error during McpManager disposal:', error);
         }
+    }
+
+    private async getGitHubToken(): Promise<string | undefined> {
+        const token = await vscode.window.showInputBox({
+            prompt: 'Enter your GitHub Personal Access Token',
+            password: true,
+            placeHolder: 'ghp_xxxxxxxxxxxxxxxxxxxx',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) {
+                    return 'Token is required';
+                }
+                if (!value.startsWith('ghp_') && !value.startsWith('github_pat_')) {
+                    return 'Invalid token format. Should start with ghp_ or github_pat_';
+                }
+                return null;
+            }
+        });
+        
+        return token;
+    }
+
+    public getGitHubServer(): GitHubMcpServer | null {
+        return this.githubServer;
     }
 }

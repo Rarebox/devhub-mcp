@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 export enum ServerStatus {
+  Connecting = 'connecting',
   Connected = 'connected',
   Disconnected = 'disconnected',
   Error = 'error'

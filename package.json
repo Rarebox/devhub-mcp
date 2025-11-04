@@ -90,6 +90,12 @@
         "title": "Disconnect All Services",
         "category": "DevHub",
         "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "devhub.listGitHubRepos",
+        "title": "List GitHub Repositories",
+        "category": "DevHub",
+        "icon": "$(repo)"
       }
     ],
     "viewsContainers": {
@@ -192,6 +198,10 @@
         {
           "command": "devhub.disconnectAll",
           "when": "true"
+        },
+        {
+          "command": "devhub.listGitHubRepos",
+          "when": "true"
         }
       ]
     },
@@ -230,7 +240,6 @@
     "mocha": "^10.2.0",
     "typescript": "^5.3.0",
     "@vscode/test-electron": "^2.3.8",
-    "@vscode/extension-test-runner": "^0.0.6",
     "glob": "^10.3.10"
   },
   "dependencies": {

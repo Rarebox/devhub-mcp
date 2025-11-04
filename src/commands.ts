@@ -237,7 +237,7 @@ export function registerCommands(
             }
             
             if (!serverId) {
-                vscode.window.showWarningMessage('Please select a server from the tree view');
+                vscode.window.showWarningMessage('Please select a server from tree view');
                 return;
             }
             
@@ -411,6 +411,51 @@ export function registerCommands(
         }
     });
 
+    // 11. devhub.listGitHubRepos - GitHub repository listesini göster
+    const listGitHubRepos = vscode.commands.registerCommand('devhub.listGitHubRepos', async () => {
+        try {
+            const githubServer = mcpManager.getGitHubServer();
+            if (!githubServer) {
+                vscode.window.showWarningMessage('GitHub is not connected. Please connect first.');
+                return;
+            }
+
+            // Show loading
+            vscode.window.showInformationMessage('Fetching GitHub repositories...');
+
+            // Get repositories
+            const repos = await githubServer.listRepositories();
+            
+            if (repos.length === 0) {
+                vscode.window.showInformationMessage('No repositories found.');
+                return;
+            }
+
+            // Show in QuickPick
+            const items = repos.map(repo => ({
+                label: repo.name,
+                description: repo.description || 'No description',
+                detail: `⭐ ${repo.stars} | 🍴 ${repo.forks} | 🐛 ${repo.open_issues} issues`,
+                repo: repo
+            }));
+
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: `Select a repository (${repos.length} total)`,
+                matchOnDescription: true,
+                matchOnDetail: true
+            });
+
+            if (selected) {
+                // Open in browser
+                vscode.env.openExternal(vscode.Uri.parse(selected.repo.url));
+            }
+
+        } catch (error) {
+            console.error('Error listing GitHub repos:', error);
+            vscode.window.showErrorMessage(`Failed to list repositories: ${error}`);
+        }
+    });
+
     // Tüm command'ları context.subscriptions'a push et
     context.subscriptions.push(
         openDashboard,
@@ -422,7 +467,8 @@ export function registerCommands(
         viewLogs,
         showServerInfo,
         connectAll,
-        disconnectAll
+        disconnectAll,
+        listGitHubRepos
     );
     
     console.log('DevHub commands registered successfully');

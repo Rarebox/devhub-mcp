@@ -1,71 +1,143 @@
-# devhub-mcp README
+# DevHub - Multi-Service Dashboard
 
-This is the README for your extension "devhub-mcp". After writing up a brief description, we recommend including the following sections.
+**Manage your developer services from one place**
 
-## Features
+A VS Code extension that provides a unified dashboard for managing multiple developer services through MCP (Model Context Protocol) integration.
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+## 🚀 Features
 
-For example if there is an image subfolder under your extension project workspace:
+- **5 Integrated Services**: GitHub, MongoDB, Authentication, Stripe, LemonSqueezy
+- **Hierarchical Tree View**: Organized service management in VS Code sidebar
+- **Real-time Status Indicators**: Visual connection status for each service
+- **Interactive Dashboard**: Modern webview panel for service overview
+- **10+ Commands**: Quick access through Command Palette
+- **Context Menus**: Right-click actions on services
+- **Keyboard Shortcuts**: Fast workflow with keybindings
 
-\!\[feature X\]\(images/feature-x.png\)
+## 📸 Screenshots
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+### Sidebar View
 
-## Requirements
+![Sidebar](screenshots/sidebar.png)
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+### Dashboard
 
-## Extension Settings
+![Dashboard](screenshots/dashboard.png)
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+## 🛠️ Installation
 
-For example:
+### From Source (Development)
 
-This extension contributes the following settings:
+1. Clone this repository
+2. Run `npm install`
+3. Press F5 to open Extension Development Host
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+### From Marketplace (Coming Soon)
 
-## Known Issues
+Search for "DevHub" in VS Code Extensions
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+## 📋 Usage
 
-## Release Notes
+### Opening DevHub
 
-Users appreciate release notes as you update your extension.
+- Click DevHub icon in Activity Bar
+- Or use Command Palette: `DevHub: Open Dashboard`
+- Or keyboard shortcut: `Ctrl+Shift+D`
 
-### 1.0.0
+### Connecting Services
 
-Initial release of ...
+1. Expand a service in sidebar
+2. Click "Connect" in Actions
+3. Or use Command Palette: `DevHub: Connect Service`
 
-### 1.0.1
+### Available Commands
 
-Fixed issue #.
+- `DevHub: Open Dashboard` - Open main dashboard
+- `DevHub: Connect Service` - Connect to a service
+- `DevHub: Disconnect Service` - Disconnect from a service
+- `DevHub: Connect All Services` - Connect to all disconnected services
+- `DevHub: Disconnect All Services` - Disconnect from all services
+- `DevHub: Test Connection` - Test service connection health
+- `DevHub: Configure Service` - Open service configuration
+- `DevHub: Refresh Services` - Refresh service list
+- `DevHub: Show Server Info` - Display server statistics
+- `DevHub: View Logs` - Open activity logs
 
-### 1.1.0
+## 🔧 Services
 
-Added features X, Y, and Z.
+### GitHub
+
+Manage repositories, pull requests, and issues
+
+### MongoDB
+
+Database connection management
+
+### Authentication
+
+OAuth and API key management
+
+### Stripe
+
+Payment and subscription management
+
+### LemonSqueezy
+
+E-commerce and order management
+
+## 🎯 Roadmap
+
+- [x] Phase 1: Project setup
+- [x] Phase 2: Core functionality (TreeView, Commands, Dashboard)
+- [ ] Phase 3: Real MCP server implementation
+- [ ] Phase 4: Advanced features (analytics, notifications)
+- [ ] Phase 5: Marketplace release
+
+## 💻 Development
+
+### Prerequisites
+
+- Node.js 18+
+- VS Code 1.85+
+- TypeScript 5.0+
+
+### Build
+
+```bash
+npm run compile
+```
+
+### Test
+
+```bash
+npm test
+```
+
+### Package
+
+```bash
+npm run vscode:prepublish
+```
+
+## 📝 License
+
+MIT License - see LICENSE file
+
+## 🤝 Contributing
+
+Contributions welcome! Please open an issue or PR.
+
+## 📧 Contact
+
+- GitHub: https://github.com/Rarebox
+- Email: info@birsonraki.net
+
+## ⭐ Acknowledgments
+
+- MCP Protocol by Anthropic
+- VS Code Extension API
+- Cline integration support
 
 ---
 
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+**Made with ❤️ by Caglar Usta**

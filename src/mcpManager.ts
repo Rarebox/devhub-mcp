@@ -2,6 +2,10 @@ import * as vscode from 'vscode';
 import { EventEmitter } from 'events';
 import { McpServer, ServerStatus, DevHubState } from './types';
 import { GitHubMcpServer } from './mcp-servers/github';
+import { MongoDBMcpServer } from './mcp-servers/mongodb';
+import { StripeMcpServer } from './mcp-servers/stripe';
+import { LemonSqueezyMcpServer } from './mcp-servers/lemonsqueezy';
+import { AuthMcpServer } from './mcp-servers/auth';
 
 export class McpManager extends EventEmitter {
     private servers: Map<string, McpServer> = new Map();
@@ -9,6 +13,10 @@ export class McpManager extends EventEmitter {
     private context: vscode.ExtensionContext;
     private state: DevHubState;
     private githubServer: GitHubMcpServer | null = null;
+    private mongodbServer: MongoDBMcpServer | null = null;
+    private stripeServer: StripeMcpServer | null = null;
+    private lemonsqueezyServer: LemonSqueezyMcpServer | null = null;
+    private authServer: AuthMcpServer | null = null;
 
     constructor(context: vscode.ExtensionContext) {
         super();
@@ -101,6 +109,119 @@ export class McpManager extends EventEmitter {
                 }
             }
 
+            // MongoDB için gerçek connection
+            if (server.type === 'mongodb') {
+                // Connection string al
+                const connectionString = await this.getMongoDBConnectionString();
+                if (!connectionString) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                // Optional: Database name
+                const database = await vscode.window.showInputBox({
+                    prompt: 'Enter default database name (optional)',
+                    placeHolder: 'mydatabase',
+                    ignoreFocusOut: true
+                });
+
+                // MongoDB server instance oluştur
+                this.mongodbServer = new MongoDBMcpServer();
+                const connected = await this.mongodbServer.connect(connectionString, database);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.mongodbServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.mongodbServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // Stripe için gerçek connection
+            if (server.type === 'stripe') {
+                const apiKey = await this.getStripeApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.stripeServer = new StripeMcpServer();
+                const connected = await this.stripeServer.connect(apiKey);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.stripeServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.stripeServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // LemonSqueezy için gerçek connection
+            if (server.type === 'lemonsqueezy') {
+                const apiKey = await this.getLemonSqueezyApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.lemonsqueezyServer = new LemonSqueezyMcpServer();
+                const connected = await this.lemonsqueezyServer.connect(apiKey);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.lemonsqueezyServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.lemonsqueezyServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // Auth için gerçek connection
+            if (server.type === 'auth') {
+                const apiKey = await this.getAuthApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.authServer = new AuthMcpServer();
+                const connected = await this.authServer.connect(apiKey);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.authServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.authServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
             // Diğer servisler için simülasyon (şimdilik)
             await new Promise(resolve => setTimeout(resolve, 1000));
             server.status = ServerStatus.Connected;
@@ -135,6 +256,30 @@ export class McpManager extends EventEmitter {
             if (server.type === 'github' && this.githubServer) {
                 await this.githubServer.disconnect();
                 this.githubServer = null;
+            }
+
+            // MongoDB için gerçek disconnect
+            if (server.type === 'mongodb' && this.mongodbServer) {
+                await this.mongodbServer.disconnect();
+                this.mongodbServer = null;
+            }
+
+            // Stripe için gerçek disconnect
+            if (server.type === 'stripe' && this.stripeServer) {
+                await this.stripeServer.disconnect();
+                this.stripeServer = null;
+            }
+
+            // LemonSqueezy için gerçek disconnect
+            if (server.type === 'lemonsqueezy' && this.lemonsqueezyServer) {
+                await this.lemonsqueezyServer.disconnect();
+                this.lemonsqueezyServer = null;
+            }
+
+            // Auth için gerçek disconnect
+            if (server.type === 'auth' && this.authServer) {
+                await this.authServer.disconnect();
+                this.authServer = null;
             }
 
             server.status = ServerStatus.Disconnected;
@@ -261,7 +406,99 @@ export class McpManager extends EventEmitter {
         return token;
     }
 
+    private async getMongoDBConnectionString(): Promise<string | undefined> {
+        const connectionString = await vscode.window.showInputBox({
+            prompt: 'Enter MongoDB connection string',
+            placeHolder: 'mongodb://localhost:27017',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) {
+                    return 'Connection string is required';
+                }
+                if (!value.startsWith('mongodb://') && !value.startsWith('mongodb+srv://')) {
+                    return 'Invalid format. Should start with mongodb:// or mongodb+srv://';
+                }
+                return null;
+            }
+        });
+        
+        return connectionString;
+    }
+
+    private async getStripeApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Stripe API Key (Secret Key)',
+            password: true,
+            placeHolder: 'sk_test_... or sk_live_...',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (!value.startsWith('sk_')) {
+                    return 'Invalid format. Should start with sk_';
+                }
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
+    private async getLemonSqueezyApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your LemonSqueezy API Key',
+            password: true,
+            placeHolder: 'your-lemonsqueezy-api-key',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (value.length < 10) {
+                    return 'API key too short';
+                }
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
+    private async getAuthApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Auth API Key',
+            password: true,
+            placeHolder: 'your-auth-api-key',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (value.length < 10) {
+                    return 'API key too short';
+                }
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
     public getGitHubServer(): GitHubMcpServer | null {
         return this.githubServer;
+    }
+
+    public getMongoDBServer(): MongoDBMcpServer | null {
+        return this.mongodbServer;
+    }
+
+    getStripeServer(): StripeMcpServer | null {
+        return this.stripeServer;
+    }
+
+    getLemonSqueezyServer(): LemonSqueezyMcpServer | null {
+        return this.lemonsqueezyServer;
+    }
+
+    getAuthServer(): AuthMcpServer | null {
+        return this.authServer;
     }
 }

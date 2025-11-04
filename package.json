@@ -1,0 +1,242 @@
+{
+  "name": "devhub-mcp",
+  "publisher": "caglarusta",
+  "displayName": "DevHub - Multi-Service Dashboard",
+  "description": "Manage multiple developer services from one dashboard with MCP integration",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "mcp",
+    "developer-tools",
+    "dashboard",
+    "github",
+    "mongodb",
+    "stripe",
+    "lemonsqueezy",
+    "cline",
+    "multi-service",
+    "devops"
+  ],
+  "activationEvents": [
+    "onView:devhubDashboard",
+    "onCommand:devhub.openDashboard",
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "devhub.openDashboard",
+        "title": "Open Dashboard",
+        "category": "DevHub",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "devhub.refreshServices",
+        "title": "Refresh Services",
+        "category": "DevHub",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devhub.connectService",
+        "title": "Connect Service",
+        "category": "DevHub",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "devhub.disconnectService",
+        "title": "Disconnect Service",
+        "category": "DevHub",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "devhub.configureService",
+        "title": "Configure Service",
+        "category": "DevHub",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "devhub.testConnection",
+        "title": "Test Connection",
+        "category": "DevHub",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "devhub.viewLogs",
+        "title": "View Logs",
+        "category": "DevHub",
+        "icon": "$(output)"
+      },
+      {
+        "command": "devhub.showServerInfo",
+        "title": "Show Server Info",
+        "category": "DevHub",
+        "icon": "$(info)"
+      },
+      {
+        "command": "devhub.connectAll",
+        "title": "Connect All Services",
+        "category": "DevHub",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "devhub.disconnectAll",
+        "title": "Disconnect All Services",
+        "category": "DevHub",
+        "icon": "$(debug-disconnect)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "devhubContainer",
+          "title": "DevHub",
+          "icon": "$(server)"
+        }
+      ]
+    },
+    "views": {
+      "devhubContainer": [
+        {
+          "id": "devhubDashboard",
+          "name": "Services",
+          "icon": "$(server)",
+          "contextualTitle": "DevHub Services"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "devhub.refreshServices",
+          "when": "view == devhubDashboard",
+          "group": "navigation@1"
+        },
+        {
+          "command": "devhub.openDashboard",
+          "when": "view == devhubDashboard",
+          "group": "navigation@2"
+        },
+        {
+          "command": "devhub.connectAll",
+          "when": "view == devhubDashboard",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "devhub.disconnectAll",
+          "when": "view == devhubDashboard",
+          "group": "1_actions@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "devhub.connectService",
+          "when": "view == devhubDashboard && viewItem == mcpServer",
+          "group": "inline@1"
+        },
+        {
+          "command": "devhub.configureService",
+          "when": "view == devhubDashboard && viewItem == mcpServer",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "devhub.testConnection",
+          "when": "view == devhubDashboard && viewItem == mcpServer",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "devhub.disconnectService",
+          "when": "view == devhubDashboard && viewItem == mcpServer",
+          "group": "2_disconnect@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "devhub.openDashboard",
+          "when": "true"
+        },
+        {
+          "command": "devhub.refreshServices",
+          "when": "true"
+        },
+        {
+          "command": "devhub.connectService",
+          "when": "true"
+        },
+        {
+          "command": "devhub.disconnectService",
+          "when": "true"
+        },
+        {
+          "command": "devhub.configureService",
+          "when": "true"
+        },
+        {
+          "command": "devhub.viewLogs",
+          "when": "true"
+        },
+        {
+          "command": "devhub.showServerInfo",
+          "when": "true"
+        },
+        {
+          "command": "devhub.connectAll",
+          "when": "true"
+        },
+        {
+          "command": "devhub.disconnectAll",
+          "when": "true"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "devhub.openDashboard",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d"
+      },
+      {
+        "command": "devhub.refreshServices",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/devhub-mcp.git"
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "18.x",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "mocha": "^10.2.0",
+    "typescript": "^5.3.0",
+    "@vscode/test-electron": "^2.3.8",
+    "@vscode/extension-test-runner": "^0.0.6",
+    "glob": "^10.3.10"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@octokit/rest": "^20.0.2",
+    "axios": "^1.6.2",
+    "mongodb": "^6.8.0"
+  }
+}

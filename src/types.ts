@@ -12,7 +12,10 @@ export enum ServiceType {
   MongoDB = 'mongodb',
   Auth = 'auth',
   Stripe = 'stripe',
-  LemonSqueezy = 'lemonsqueezy'
+  LemonSqueezy = 'lemonsqueezy',
+  Context7 = 'context7',
+  SequentialThinking = 'sequential-thinking',
+  Firecrawl = 'firecrawl'
 }
 
 export interface McpServer {

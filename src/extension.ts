@@ -56,6 +56,30 @@ export function activate(context: vscode.ExtensionContext) {
         config: {}
     });
 
+    mcpManager.registerServer({
+        id: 'context7-server',
+        name: 'Context 7',
+        type: ServiceType.Context7,
+        status: ServerStatus.Disconnected,
+        config: {}
+    });
+
+    mcpManager.registerServer({
+        id: 'sequential-thinking-server',
+        name: 'Sequential Thinking',
+        type: ServiceType.SequentialThinking,
+        status: ServerStatus.Disconnected,
+        config: {}
+    });
+
+    mcpManager.registerServer({
+        id: 'firecrawl-server',
+        name: 'Firecrawl',
+        type: ServiceType.Firecrawl,
+        status: ServerStatus.Disconnected,
+        config: {}
+    });
+
     // 3. Create and register TreeView
     treeProvider = createTreeView(context, mcpManager);
 

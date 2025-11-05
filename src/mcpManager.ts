@@ -6,6 +6,9 @@ import { MongoDBMcpServer } from './mcp-servers/mongodb';
 import { StripeMcpServer } from './mcp-servers/stripe';
 import { LemonSqueezyMcpServer } from './mcp-servers/lemonsqueezy';
 import { AuthMcpServer } from './mcp-servers/auth';
+import { Context7McpServer } from './mcp-servers/context7';
+import { SequentialThinkingMcpServer } from './mcp-servers/sequential-thinking';
+import { FirecrawlMcpServer } from './mcp-servers/firecrawl';
 
 export class McpManager extends EventEmitter {
     private servers: Map<string, McpServer> = new Map();
@@ -17,6 +20,9 @@ export class McpManager extends EventEmitter {
     private stripeServer: StripeMcpServer | null = null;
     private lemonsqueezyServer: LemonSqueezyMcpServer | null = null;
     private authServer: AuthMcpServer | null = null;
+    private context7Server: Context7McpServer | null = null;
+    private sequentialThinkingServer: SequentialThinkingMcpServer | null = null;
+    private firecrawlServer: FirecrawlMcpServer | null = null;
 
     constructor(context: vscode.ExtensionContext) {
         super();
@@ -81,7 +87,7 @@ export class McpManager extends EventEmitter {
             server.status = ServerStatus.Connecting;
             this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connecting });
 
-            // GitHub için gerçek connection
+            // GitHub iรงin gerรงek connection
             if (server.type === 'github') {
                 // Token al
                 const token = await this.getGitHubToken();
@@ -91,7 +97,7 @@ export class McpManager extends EventEmitter {
                     return false;
                 }
 
-                // GitHub server instance oluştur
+                // GitHub server instance oluล�tur
                 this.githubServer = new GitHubMcpServer();
                 const connected = await this.githubServer.connect(token);
 
@@ -109,7 +115,7 @@ export class McpManager extends EventEmitter {
                 }
             }
 
-            // MongoDB için gerçek connection
+            // MongoDB iรงin gerรงek connection
             if (server.type === 'mongodb') {
                 // Connection string al
                 const connectionString = await this.getMongoDBConnectionString();
@@ -126,7 +132,7 @@ export class McpManager extends EventEmitter {
                     ignoreFocusOut: true
                 });
 
-                // MongoDB server instance oluştur
+                // MongoDB server instance oluล�tur
                 this.mongodbServer = new MongoDBMcpServer();
                 const connected = await this.mongodbServer.connect(connectionString, database);
 
@@ -144,7 +150,7 @@ export class McpManager extends EventEmitter {
                 }
             }
 
-            // Stripe için gerçek connection
+            // Stripe iรงin gerรงek connection
             if (server.type === 'stripe') {
                 const apiKey = await this.getStripeApiKey();
                 if (!apiKey) {
@@ -170,7 +176,7 @@ export class McpManager extends EventEmitter {
                 }
             }
 
-            // LemonSqueezy için gerçek connection
+            // LemonSqueezy iรงin gerรงek connection
             if (server.type === 'lemonsqueezy') {
                 const apiKey = await this.getLemonSqueezyApiKey();
                 if (!apiKey) {
@@ -196,7 +202,7 @@ export class McpManager extends EventEmitter {
                 }
             }
 
-            // Auth için gerçek connection
+            // Auth iรงin gerรงek connection
             if (server.type === 'auth') {
                 const apiKey = await this.getAuthApiKey();
                 if (!apiKey) {
@@ -222,7 +228,85 @@ export class McpManager extends EventEmitter {
                 }
             }
 
-            // Diğer servisler için simülasyon (şimdilik)
+            // Context 7 iรงin gerรงek connection
+            if (server.type === 'context7') {
+                const apiKey = await this.getContext7ApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.context7Server = new Context7McpServer();
+                const connected = await this.context7Server.connect(apiKey);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.context7Server);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.context7Server = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // Sequential Thinking iรงin gerรงek connection
+            if (server.type === 'sequential-thinking') {
+                const apiKey = await this.getSequentialThinkingApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.sequentialThinkingServer = new SequentialThinkingMcpServer();
+                const connected = await this.sequentialThinkingServer.connect(apiKey);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.sequentialThinkingServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.sequentialThinkingServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // Firecrawl iรงin gerรงek connection
+            if (server.type === 'firecrawl') {
+                const apiKey = await this.getFirecrawlApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.firecrawlServer = new FirecrawlMcpServer();
+                const connected = await this.firecrawlServer.connect(apiKey);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.firecrawlServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.firecrawlServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // Diฤ�er servisler iรงin simรผlasyon (ล�imdilik)
             await new Promise(resolve => setTimeout(resolve, 1000));
             server.status = ServerStatus.Connected;
             this.activeConnections.set(serverId, { type: server.type, connected: true });
@@ -252,34 +336,52 @@ export class McpManager extends EventEmitter {
 
             console.log(`Disconnecting from ${server.name}...`);
 
-            // GitHub için gerçek disconnect
+            // GitHub iรงin gerรงek disconnect
             if (server.type === 'github' && this.githubServer) {
                 await this.githubServer.disconnect();
                 this.githubServer = null;
             }
 
-            // MongoDB için gerçek disconnect
+            // MongoDB iรงin gerรงek disconnect
             if (server.type === 'mongodb' && this.mongodbServer) {
                 await this.mongodbServer.disconnect();
                 this.mongodbServer = null;
             }
 
-            // Stripe için gerçek disconnect
+            // Stripe iรงin gerรงek disconnect
             if (server.type === 'stripe' && this.stripeServer) {
                 await this.stripeServer.disconnect();
                 this.stripeServer = null;
             }
 
-            // LemonSqueezy için gerçek disconnect
+            // LemonSqueezy iรงin gerรงek disconnect
             if (server.type === 'lemonsqueezy' && this.lemonsqueezyServer) {
                 await this.lemonsqueezyServer.disconnect();
                 this.lemonsqueezyServer = null;
             }
 
-            // Auth için gerçek disconnect
+            // Auth iรงin gerรงek disconnect
             if (server.type === 'auth' && this.authServer) {
                 await this.authServer.disconnect();
                 this.authServer = null;
+            }
+
+            // Context 7 iรงin gerรงek disconnect
+            if (server.type === 'context7' && this.context7Server) {
+                await this.context7Server.disconnect();
+                this.context7Server = null;
+            }
+
+            // Sequential Thinking iรงin gerรงek disconnect
+            if (server.type === 'sequential-thinking' && this.sequentialThinkingServer) {
+                await this.sequentialThinkingServer.disconnect();
+                this.sequentialThinkingServer = null;
+            }
+
+            // Firecrawl iรงin gerรงek disconnect
+            if (server.type === 'firecrawl' && this.firecrawlServer) {
+                await this.firecrawlServer.disconnect();
+                this.firecrawlServer = null;
             }
 
             server.status = ServerStatus.Disconnected;
@@ -482,6 +584,21 @@ export class McpManager extends EventEmitter {
         return apiKey;
     }
 
+    private async getContext7ApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Context 7 API Key',
+            password: true,
+            placeHolder: 'ctx7_...',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) return 'API key is required';
+                if (!value.startsWith('ctx7_')) return 'Invalid format. Should start with ctx7_';
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
     public getGitHubServer(): GitHubMcpServer | null {
         return this.githubServer;
     }
@@ -500,5 +617,47 @@ export class McpManager extends EventEmitter {
 
     getAuthServer(): AuthMcpServer | null {
         return this.authServer;
+    }
+
+    getContext7Server(): Context7McpServer | null {
+        return this.context7Server;
+    }
+
+    private async getSequentialThinkingApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Sequential Thinking API Key or any key',
+            password: true,
+            placeHolder: 'st_... or any-key-for-reasoning',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) return 'API key is required';
+                if (value.length < 10) return 'Key must be at least 10 characters';
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
+    getSequentialThinkingServer(): SequentialThinkingMcpServer | null {
+        return this.sequentialThinkingServer;
+    }
+
+    private async getFirecrawlApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Firecrawl API Key',
+            password: true,
+            placeHolder: 'fc_... (Get from firecrawl.dev)',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) return 'API key is required';
+                if (!value.startsWith('fc_')) return 'Invalid format. Should start with fc_';
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
+    getFirecrawlServer(): FirecrawlMcpServer | null {
+        return this.firecrawlServer;
     }
 }

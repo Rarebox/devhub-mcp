@@ -641,8 +641,12 @@ export class McpManager extends EventEmitter {
             placeHolder: 'ctx7_...',
             ignoreFocusOut: true,
             validateInput: (value) => {
-                if (!value) return 'API key is required';
-                if (!value.startsWith('ctx7_')) return 'Invalid format. Should start with ctx7_';
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (!value.startsWith('st_')) {
+                    return 'Invalid format. Should start with st_';
+                }
                 return null;
             }
         });
@@ -680,8 +684,12 @@ export class McpManager extends EventEmitter {
             placeHolder: 'st_... or any-key-for-reasoning',
             ignoreFocusOut: true,
             validateInput: (value) => {
-                if (!value) return 'API key is required';
-                if (value.length < 10) return 'Key must be at least 10 characters';
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (value.length < 10) {
+                    return 'Key must be at least 10 characters';
+                }
                 return null;
             }
         });
@@ -699,8 +707,12 @@ export class McpManager extends EventEmitter {
             placeHolder: 'fc_... (Get from firecrawl.dev)',
             ignoreFocusOut: true,
             validateInput: (value) => {
-                if (!value) return 'API key is required';
-                if (!value.startsWith('fc_')) return 'Invalid format. Should start with fc_';
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (!value.startsWith('fc_')) {
+                    return 'Invalid format. Should start with fc_';
+                }
                 return null;
             }
         });
@@ -717,7 +729,9 @@ export class McpManager extends EventEmitter {
             placeHolder: process.cwd(),
             ignoreFocusOut: true,
             validateInput: (value) => {
-                if (!value) return 'Root path is required';
+                if (!value) {
+                    return 'Root path is required';
+                }
                 return null;
             }
         });

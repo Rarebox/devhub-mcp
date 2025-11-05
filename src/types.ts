@@ -18,7 +18,10 @@ export enum ServiceType {
   Firecrawl = 'firecrawl',
   FileSystem = 'filesystem',
   Browser = 'browser',
-  Figma = 'figma'
+  Figma = 'figma',
+  Supabase = 'supabase',
+  Vercel = 'vercel',
+  Sentry = 'sentry'
 }
 
 export interface McpServer {

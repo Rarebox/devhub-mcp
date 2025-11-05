@@ -104,6 +104,30 @@ export function activate(context: vscode.ExtensionContext) {
         config: {}
     });
 
+    mcpManager.registerServer({
+        id: 'supabase-server',
+        name: 'Supabase',
+        type: ServiceType.Supabase,
+        status: ServerStatus.Disconnected,
+        config: {}
+    });
+
+    mcpManager.registerServer({
+        id: 'vercel-server',
+        name: 'Vercel',
+        type: ServiceType.Vercel,
+        status: ServerStatus.Disconnected,
+        config: {}
+    });
+
+    mcpManager.registerServer({
+        id: 'sentry-server',
+        name: 'Sentry',
+        type: ServiceType.Sentry,
+        status: ServerStatus.Disconnected,
+        config: {}
+    });
+
     // 3. Create and register TreeView
     treeProvider = createTreeView(context, mcpManager);
 

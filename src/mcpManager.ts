@@ -12,6 +12,9 @@ import { FirecrawlMcpServer } from './mcp-servers/firecrawl';
 import { FilesystemMcpServer } from './mcp-servers/filesystem';
 import { BrowserMcpServer } from './mcp-servers/browser';
 import { FigmaMcpServer } from './mcp-servers/figma';
+import { SupabaseMcpServer } from './mcp-servers/supabase';
+import { VercelMcpServer } from './mcp-servers/vercel';
+import { SentryMcpServer } from './mcp-servers/sentry';
 
 export class McpManager extends EventEmitter {
     private servers: Map<string, McpServer> = new Map();
@@ -29,6 +32,9 @@ export class McpManager extends EventEmitter {
     private filesystemServer: FilesystemMcpServer | null = null;
     private browserServer: BrowserMcpServer | null = null;
     private figmaServer: FigmaMcpServer | null = null;
+    private supabaseServer: SupabaseMcpServer | null = null;
+    private vercelServer: VercelMcpServer | null = null;
+    private sentryServer: SentryMcpServer | null = null;
 
     constructor(context: vscode.ExtensionContext) {
         super();

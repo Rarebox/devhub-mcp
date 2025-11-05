@@ -128,6 +128,30 @@ export function activate(context: vscode.ExtensionContext) {
         config: {}
     });
 
+    mcpManager.registerServer({
+        id: 'taskmaster-server',
+        name: 'Taskmaster',
+        type: ServiceType.Taskmaster,
+        status: ServerStatus.Disconnected,
+        config: {}
+    });
+
+    mcpManager.registerServer({
+        id: 'desktop-commander-server',
+        name: 'Desktop Commander',
+        type: ServiceType.DesktopCommander,
+        status: ServerStatus.Disconnected,
+        config: {}
+    });
+
+    mcpManager.registerServer({
+        id: '21st-dev-server',
+        name: '21st Dev',
+        type: ServiceType.Dev21,
+        status: ServerStatus.Disconnected,
+        config: {}
+    });
+
     // 3. Create and register TreeView
     treeProvider = createTreeView(context, mcpManager);
 

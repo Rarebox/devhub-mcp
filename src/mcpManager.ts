@@ -15,6 +15,9 @@ import { FigmaMcpServer } from './mcp-servers/figma';
 import { SupabaseMcpServer } from './mcp-servers/supabase';
 import { VercelMcpServer } from './mcp-servers/vercel';
 import { SentryMcpServer } from './mcp-servers/sentry';
+import { TaskmasterMcpServer } from './mcp-servers/taskmaster';
+import { DesktopCommanderMcpServer } from './mcp-servers/desktop-commander';
+import { Dev21McpServer } from './mcp-servers/21st-dev';
 
 export class McpManager extends EventEmitter {
     private servers: Map<string, McpServer> = new Map();
@@ -35,6 +38,9 @@ export class McpManager extends EventEmitter {
     private supabaseServer: SupabaseMcpServer | null = null;
     private vercelServer: VercelMcpServer | null = null;
     private sentryServer: SentryMcpServer | null = null;
+    private taskmasterServer: TaskmasterMcpServer | null = null;
+    private desktopCommanderServer: DesktopCommanderMcpServer | null = null;
+    private dev21Server: Dev21McpServer | null = null;
 
     constructor(context: vscode.ExtensionContext) {
         super();

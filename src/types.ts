@@ -21,7 +21,10 @@ export enum ServiceType {
   Figma = 'figma',
   Supabase = 'supabase',
   Vercel = 'vercel',
-  Sentry = 'sentry'
+  Sentry = 'sentry',
+  Taskmaster = 'taskmaster',
+  DesktopCommander = 'desktop-commander',
+  Dev21 = '21st-dev'
 }
 
 export interface McpServer {

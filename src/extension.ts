@@ -80,6 +80,30 @@ export function activate(context: vscode.ExtensionContext) {
         config: {}
     });
 
+    mcpManager.registerServer({
+        id: 'filesystem-server',
+        name: 'FileSystem',
+        type: ServiceType.FileSystem,
+        status: ServerStatus.Disconnected,
+        config: {}
+    });
+
+    mcpManager.registerServer({
+        id: 'browser-server',
+        name: 'Browser',
+        type: ServiceType.Browser,
+        status: ServerStatus.Disconnected,
+        config: {}
+    });
+
+    mcpManager.registerServer({
+        id: 'figma-server',
+        name: 'Figma',
+        type: ServiceType.Figma,
+        status: ServerStatus.Disconnected,
+        config: {}
+    });
+
     // 3. Create and register TreeView
     treeProvider = createTreeView(context, mcpManager);
 

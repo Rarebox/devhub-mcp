@@ -9,6 +9,9 @@ import { AuthMcpServer } from './mcp-servers/auth';
 import { Context7McpServer } from './mcp-servers/context7';
 import { SequentialThinkingMcpServer } from './mcp-servers/sequential-thinking';
 import { FirecrawlMcpServer } from './mcp-servers/firecrawl';
+import { FilesystemMcpServer } from './mcp-servers/filesystem';
+import { BrowserMcpServer } from './mcp-servers/browser';
+import { FigmaMcpServer } from './mcp-servers/figma';
 
 export class McpManager extends EventEmitter {
     private servers: Map<string, McpServer> = new Map();
@@ -23,6 +26,9 @@ export class McpManager extends EventEmitter {
     private context7Server: Context7McpServer | null = null;
     private sequentialThinkingServer: SequentialThinkingMcpServer | null = null;
     private firecrawlServer: FirecrawlMcpServer | null = null;
+    private filesystemServer: FilesystemMcpServer | null = null;
+    private browserServer: BrowserMcpServer | null = null;
+    private figmaServer: FigmaMcpServer | null = null;
 
     constructor(context: vscode.ExtensionContext) {
         super();
@@ -87,7 +93,7 @@ export class McpManager extends EventEmitter {
             server.status = ServerStatus.Connecting;
             this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connecting });
 
-            // GitHub iรงin gerรงek connection
+            // GitHub için gerçek connection
             if (server.type === 'github') {
                 // Token al
                 const token = await this.getGitHubToken();
@@ -97,7 +103,7 @@ export class McpManager extends EventEmitter {
                     return false;
                 }
 
-                // GitHub server instance oluล�tur
+                // GitHub server instance oluştur
                 this.githubServer = new GitHubMcpServer();
                 const connected = await this.githubServer.connect(token);
 
@@ -115,7 +121,7 @@ export class McpManager extends EventEmitter {
                 }
             }
 
-            // MongoDB iรงin gerรงek connection
+            // MongoDB için gerçek connection
             if (server.type === 'mongodb') {
                 // Connection string al
                 const connectionString = await this.getMongoDBConnectionString();
@@ -132,7 +138,7 @@ export class McpManager extends EventEmitter {
                     ignoreFocusOut: true
                 });
 
-                // MongoDB server instance oluล�tur
+                // MongoDB server instance oluştur
                 this.mongodbServer = new MongoDBMcpServer();
                 const connected = await this.mongodbServer.connect(connectionString, database);
 
@@ -150,7 +156,7 @@ export class McpManager extends EventEmitter {
                 }
             }
 
-            // Stripe iรงin gerรงek connection
+            // Stripe için gerçek connection
             if (server.type === 'stripe') {
                 const apiKey = await this.getStripeApiKey();
                 if (!apiKey) {
@@ -176,7 +182,7 @@ export class McpManager extends EventEmitter {
                 }
             }
 
-            // LemonSqueezy iรงin gerรงek connection
+            // LemonSqueezy için gerçek connection
             if (server.type === 'lemonsqueezy') {
                 const apiKey = await this.getLemonSqueezyApiKey();
                 if (!apiKey) {
@@ -202,7 +208,7 @@ export class McpManager extends EventEmitter {
                 }
             }
 
-            // Auth iรงin gerรงek connection
+            // Auth için gerçek connection
             if (server.type === 'auth') {
                 const apiKey = await this.getAuthApiKey();
                 if (!apiKey) {
@@ -228,7 +234,7 @@ export class McpManager extends EventEmitter {
                 }
             }
 
-            // Context 7 iรงin gerรงek connection
+            // Context 7 için gerçek connection
             if (server.type === 'context7') {
                 const apiKey = await this.getContext7ApiKey();
                 if (!apiKey) {
@@ -254,7 +260,7 @@ export class McpManager extends EventEmitter {
                 }
             }
 
-            // Sequential Thinking iรงin gerรงek connection
+            // Sequential Thinking için gerçek connection
             if (server.type === 'sequential-thinking') {
                 const apiKey = await this.getSequentialThinkingApiKey();
                 if (!apiKey) {
@@ -280,7 +286,7 @@ export class McpManager extends EventEmitter {
                 }
             }
 
-            // Firecrawl iรงin gerรงek connection
+            // Firecrawl için gerçek connection
             if (server.type === 'firecrawl') {
                 const apiKey = await this.getFirecrawlApiKey();
                 if (!apiKey) {
@@ -306,7 +312,33 @@ export class McpManager extends EventEmitter {
                 }
             }
 
-            // Diฤ�er servisler iรงin simรผlasyon (ล�imdilik)
+            // FileSystem için gerçek connection
+            if (server.type === 'filesystem') {
+                const rootPath = await this.getFilesystemRootPath();
+                if (!rootPath) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.filesystemServer = new FilesystemMcpServer({ rootPath });
+                const connected = await this.filesystemServer.connect();
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.filesystemServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.filesystemServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // Diğer servisler için simülasyon (şimdilik)
             await new Promise(resolve => setTimeout(resolve, 1000));
             server.status = ServerStatus.Connected;
             this.activeConnections.set(serverId, { type: server.type, connected: true });
@@ -336,52 +368,58 @@ export class McpManager extends EventEmitter {
 
             console.log(`Disconnecting from ${server.name}...`);
 
-            // GitHub iรงin gerรงek disconnect
+            // GitHub için gerçek disconnect
             if (server.type === 'github' && this.githubServer) {
                 await this.githubServer.disconnect();
                 this.githubServer = null;
             }
 
-            // MongoDB iรงin gerรงek disconnect
+            // MongoDB için gerçek disconnect
             if (server.type === 'mongodb' && this.mongodbServer) {
                 await this.mongodbServer.disconnect();
                 this.mongodbServer = null;
             }
 
-            // Stripe iรงin gerรงek disconnect
+            // Stripe için gerçek disconnect
             if (server.type === 'stripe' && this.stripeServer) {
                 await this.stripeServer.disconnect();
                 this.stripeServer = null;
             }
 
-            // LemonSqueezy iรงin gerรงek disconnect
+            // LemonSqueezy için gerçek disconnect
             if (server.type === 'lemonsqueezy' && this.lemonsqueezyServer) {
                 await this.lemonsqueezyServer.disconnect();
                 this.lemonsqueezyServer = null;
             }
 
-            // Auth iรงin gerรงek disconnect
+            // Auth için gerçek disconnect
             if (server.type === 'auth' && this.authServer) {
                 await this.authServer.disconnect();
                 this.authServer = null;
             }
 
-            // Context 7 iรงin gerรงek disconnect
+            // Context 7 için gerçek disconnect
             if (server.type === 'context7' && this.context7Server) {
                 await this.context7Server.disconnect();
                 this.context7Server = null;
             }
 
-            // Sequential Thinking iรงin gerรงek disconnect
+            // Sequential Thinking için gerçek disconnect
             if (server.type === 'sequential-thinking' && this.sequentialThinkingServer) {
                 await this.sequentialThinkingServer.disconnect();
                 this.sequentialThinkingServer = null;
             }
 
-            // Firecrawl iรงin gerรงek disconnect
+            // Firecrawl için gerçek disconnect
             if (server.type === 'firecrawl' && this.firecrawlServer) {
                 await this.firecrawlServer.disconnect();
                 this.firecrawlServer = null;
+            }
+
+            // FileSystem için gerçek disconnect
+            if (server.type === 'filesystem' && this.filesystemServer) {
+                await this.filesystemServer.disconnect();
+                this.filesystemServer = null;
             }
 
             server.status = ServerStatus.Disconnected;
@@ -659,5 +697,22 @@ export class McpManager extends EventEmitter {
 
     getFirecrawlServer(): FirecrawlMcpServer | null {
         return this.firecrawlServer;
+    }
+
+    private async getFilesystemRootPath(): Promise<string | undefined> {
+        const rootPath = await vscode.window.showInputBox({
+            prompt: 'Enter root path for file system access',
+            placeHolder: process.cwd(),
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) return 'Root path is required';
+                return null;
+            }
+        });
+        return rootPath;
+    }
+
+    getFilesystemServer(): FilesystemMcpServer | null {
+        return this.filesystemServer;
     }
 }

@@ -15,7 +15,10 @@ export enum ServiceType {
   LemonSqueezy = 'lemonsqueezy',
   Context7 = 'context7',
   SequentialThinking = 'sequential-thinking',
-  Firecrawl = 'firecrawl'
+  Firecrawl = 'firecrawl',
+  FileSystem = 'filesystem',
+  Browser = 'browser',
+  Figma = 'figma'
 }
 
 export interface McpServer {

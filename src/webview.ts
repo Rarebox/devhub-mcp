@@ -74,9 +74,26 @@ export class WebViewManager {
         return panel;
     }
 
-    private handleWebviewMessage(panelId: string, message: WebViewMessage): void {
+    private handleWebviewMessage(panelId: string, message: any): void {
         try {
-            switch (message.type) {
+            switch (message.command) {
+                case 'getServices':
+                    // Services'i gönder
+                    this.sendServicesUpdate(panelId);
+                    break;
+                case 'connectService':
+                    this.connectToServer(message.serviceId);
+                    // 1 saniye sonra update gönder
+                    setTimeout(() => {
+                        this.sendServicesUpdate(panelId);
+                    }, 1000);
+                    break;
+                case 'disconnectService':
+                    this.disconnectFromServer(message.serviceId);
+                    setTimeout(() => {
+                        this.sendServicesUpdate(panelId);
+                    }, 1000);
+                    break;
                 case 'refreshServers':
                     this.refreshServersData(panelId);
                     break;
@@ -93,7 +110,7 @@ export class WebViewManager {
                     this.testServerConnection(message.data?.serverId);
                     break;
                 default:
-                    console.warn(`Unknown message type: ${message.type}`);
+                    console.warn(`Unknown message type: ${message.command || message.type}`);
             }
         } catch (error) {
             console.error('Error handling webview message:', error);
@@ -107,6 +124,17 @@ export class WebViewManager {
             panel.webview.postMessage({
                 type: 'serversUpdated',
                 data: { servers }
+            });
+        }
+    }
+
+    private sendServicesUpdate(panelId: string): void {
+        const panel = this.panels.get(panelId);
+        if (panel) {
+            const servers = this.mcpManager.getAllServers();
+            panel.webview.postMessage({
+                type: 'updateServices',
+                services: servers
             });
         }
     }
@@ -348,175 +376,199 @@ export class WebViewManager {
     }
 
     private getMainDashboardHtml(): string {
-        const servers = this.mcpManager.getAllServers();
-        
-        return `
-<!DOCTYPE html>
+        return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DevHub Dashboard</title>
     <style>
-        body {
-            font-family: var(--vscode-font-family);
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-            padding: 20px;
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .header {
-            border-bottom: 1px solid var(--vscode-panel-border);
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1e1e1e 0%, #252526 100%);
+            color: #e0e0e0;
+            padding: 20px;
+            min-height: 100vh;
         }
-        .servers-grid {
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #007ACC, #1E90FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        #services-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
             margin-top: 20px;
         }
-        .server-card {
-            border: 1px solid var(--vscode-panel-border);
-            border-radius: 8px;
+
+        .service-card {
+            background: linear-gradient(135deg, #2d2d30 0%, #3e3e42 100%);
+            border: 1px solid #404040;
+            border-radius: 12px;
             padding: 20px;
-            background-color: var(--vscode-editor-background);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
         }
-        .server-header {
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            border-color: #007ACC;
+            box-shadow: 0 12px 24px rgba(0, 122, 204, 0.2);
+        }
+
+        .service-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
         }
-        .server-name {
-            font-size: 18px;
-            font-weight: bold;
-            color: var(--vscode-foreground);
+
+        .service-header h3 {
+            font-size: 1.3em;
+            color: #ffffff;
         }
-        .server-type {
-            background-color: var(--vscode-badge-background);
-            color: var(--vscode-badge-foreground);
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 12px;
+
+        .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
         }
-        .server-status {
+
+        .status.connected {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+
+        .status.disconnected {
+            background-color: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+
+        .service-type {
+            color: #858585;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .service-actions {
             display: flex;
-            align-items: center;
-            margin: 10px 0;
+            gap: 10px;
         }
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        .status-indicator.connected { background-color: #4CAF50; }
-        .status-indicator.disconnected { background-color: #FF9800; }
-        .status-indicator.error { background-color: #F44336; }
-        .server-actions {
-            margin-top: 15px;
-        }
-        .btn {
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
+
+        .btn-connect {
+            flex: 1;
+            padding: 10px 15px;
+            background: linear-gradient(135deg, #007ACC, #1E90FF);
+            color: white;
             border: none;
-            padding: 6px 12px;
-            margin-right: 8px;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
         }
-        .btn:hover {
-            background-color: var(--vscode-button-hoverBackground);
+
+        .btn-connect:hover {
+            background: linear-gradient(135deg, #005a9e, #1570d0);
+            transform: scale(1.02);
         }
-        .btn:disabled {
-            background-color: var(--vscode-button-secondaryBackground);
-            color: var(--vscode-button-secondaryForeground);
-            cursor: not-allowed;
-        }
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: var(--vscode-descriptionForeground);
+
+        .error-message {
+            background: rgba(244, 67, 54, 0.1);
+            border-left: 4px solid #f44336;
+            color: #ffcdd2;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>DevHub Dashboard</h1>
-        <p>Manage your developer services from one place</p>
+    <div class="container">
+        <h1>🚀 DevHub Dashboard</h1>
+        <p style="color: #a0a0a0; margin-bottom: 20px;">Manage your 17 MCP Services</p>
+        <div id="services-container"></div>
     </div>
-    
-    <div class="servers-grid">
-        ${servers.length > 0 ? 
-            servers.map(server => `
-                <div class="server-card">
-                    <div class="server-header">
-                        <div class="server-name">${server.name}</div>
-                        <div class="server-type">${server.type}</div>
-                    </div>
-                    <div class="server-status">
-                        <div class="status-indicator ${server.status}"></div>
-                        <span>${server.status.toUpperCase()}</span>
-                    </div>
-                    <div class="server-actions">
-                        ${server.status === 'disconnected' ? 
-                            `<button class="btn" onclick="connectServer('${server.id}')">Connect</button>` :
-                            `<button class="btn" onclick="disconnectServer('${server.id}')">Disconnect</button>`
-                        }
-                        <button class="btn" onclick="testConnection('${server.id}')">Test</button>
-                        <button class="btn" onclick="configureServer('${server.id}')">Configure</button>
-                    </div>
-                </div>
-            `).join('') : 
-            '<div class="empty-state">No servers configured. Add your first server to get started.</div>'
-        }
-    </div>
-    
+
     <script>
         const vscode = acquireVsCodeApi();
         
-        function connectServer(serverId) {
+        // İlk load
+        window.addEventListener('load', () => {
             vscode.postMessage({
-                type: 'connectServer',
-                data: { serverId }
+                command: 'getServices'
             });
-        }
+        });
         
-        function disconnectServer(serverId) {
-            vscode.postMessage({
-                type: 'disconnectServer',
-                data: { serverId }
-            });
-        }
-        
-        function testConnection(serverId) {
-            vscode.postMessage({
-                type: 'testConnection',
-                data: { serverId }
-            });
-        }
-        
-        function configureServer(serverId) {
-            vscode.postMessage({
-                type: 'configureServer',
-                data: { serverId }
-            });
-        }
-        
-        // Listen for updates from extension
+        // Message listener
         window.addEventListener('message', event => {
             const message = event.data;
-            if (message.type === 'serversUpdated') {
-                // Refresh the dashboard with new server data
-                location.reload();
+            
+            if (message.type === 'updateServices') {
+                renderServices(message.services);
             }
         });
+        
+        function renderServices(services) {
+            const container = document.getElementById('services-container');
+            
+            if (!services || services.length === 0) {
+                container.innerHTML = '<p>No services available</p>';
+                return;
+            }
+            
+            container.innerHTML = services.map(service => \`
+                <div class="service-card">
+                    <div class="service-header">
+                        <h3>\${service.name}</h3>
+                        <span class="status \${service.status === 'connected' ? 'connected' : 'disconnected'}">
+                            \${service.status}
+                        </span>
+                    </div>
+                    <div class="service-type">\${service.type}</div>
+                    <div class="service-actions">
+                        <button class="btn-connect" onclick="handleServiceAction('\${service.id}', '\${service.status}')">
+                            \${service.status === 'connected' ? '✓ Connected' : 'Connect'}
+                        </button>
+                    </div>
+                </div>
+            \`).join('');
+        }
+        
+        function handleServiceAction(serviceId, status) {
+            if (status === 'connected') {
+                vscode.postMessage({
+                    command: 'disconnectService',
+                    serviceId: serviceId
+                });
+            } else {
+                vscode.postMessage({
+                    command: 'connectService',
+                    serviceId: serviceId
+                });
+            }
+        }
     </script>
 </body>
-</html>
-        `;
+</html>`;
     }
 
     public dispose(): void {

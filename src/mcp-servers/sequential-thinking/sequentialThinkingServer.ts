@@ -213,7 +213,9 @@ export class SequentialThinkingMcpServer {
     }
 
     private synthesizeConclusion(steps: ThinkingStep[]): string {
-        if (steps.length === 0) return 'No steps to synthesize';
+        if (steps.length === 0) {
+            return 'No steps to synthesize';
+        }
         
         const conclusionsText = steps.map(s => s.conclusion).join(' → ');
         return `Reasoning chain complete: ${conclusionsText}`;

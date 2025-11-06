@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { McpManager } from './mcpManager';
 import { DevHubTreeDataProvider } from './treeView';
 import { createDashboard } from './webview';
+import { ConfigurationPanel } from './ui/configurationPanel';
 import { McpServer, ServiceType, ServerStatus } from './types';
 
 export function registerCommands(
@@ -214,11 +215,29 @@ export function registerCommands(
                 return;
             }
             
-            // Placeholder for configuration (Phase 3'te implement edilecek)
-            vscode.window.showInformationMessage(
-                `Configuration panel for ${server.name} will be available in Phase 3!`,
-                'OK'
+            // Panel aç
+            const panel = ConfigurationPanel.createPanel(
+                context.extensionUri,
+                serverId,
+                server.name
             );
+            
+            // Message listener
+            panel.webview.onDidReceiveMessage((message) => {
+                if (message.command === 'saveConfig') {
+                    // Config'i kaydet
+                    context.secrets.store(`${serverId}-config`, JSON.stringify(message.config));
+                    
+                    // Server config'ini güncelle
+                    mcpManager.updateServerConfig(serverId, message.config);
+                    
+                    vscode.window.showInformationMessage(
+                        `${server.name} configuration saved!`
+                    );
+                    
+                    panel.dispose();
+                }
+            });
             
         } catch (error) {
             vscode.window.showErrorMessage(`Configuration error: ${error}`);

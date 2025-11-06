@@ -172,7 +172,9 @@ export class FilesystemMcpServer {
             const regex = new RegExp(pattern, 'i');
 
             const searchDir = (dir: string) => {
-                if (results.length >= maxResults) return;
+                if (results.length >= maxResults) {
+                    return;
+                }
 
                 const items = fs.readdirSync(dir);
                 for (const item of items) {

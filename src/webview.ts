@@ -43,6 +43,8 @@ export class WebViewManager {
     }
 
     public createMainDashboard(): vscode.WebviewPanel {
+        console.log('WebView: Creating main dashboard panel');
+        
         const panel = vscode.window.createWebviewPanel(
             'mainDashboard',
             'DevHub Dashboard',
@@ -56,6 +58,7 @@ export class WebViewManager {
 
         // Store panel reference
         this.panels.set('main', panel);
+        console.log('WebView: Panel stored with key "main". Active panels:', Array.from(this.panels.keys()));
 
         // Set webview content
         panel.webview.html = this.getMainDashboardHtml();
@@ -68,6 +71,7 @@ export class WebViewManager {
 
         // Handle panel disposal
         panel.onDidDispose(() => {
+            console.log('WebView: Main dashboard panel disposed');
             this.panels.delete('main');
         });
 
@@ -83,16 +87,9 @@ export class WebViewManager {
                     break;
                 case 'connectService':
                     this.connectToServer(message.serviceId);
-                    // 1 saniye sonra update gönder
-                    setTimeout(() => {
-                        this.sendServicesUpdate(panelId);
-                    }, 1000);
                     break;
                 case 'disconnectService':
                     this.disconnectFromServer(message.serviceId);
-                    setTimeout(() => {
-                        this.sendServicesUpdate(panelId);
-                    }, 1000);
                     break;
                 case 'refreshServers':
                     this.refreshServersData(panelId);
@@ -147,7 +144,10 @@ export class WebViewManager {
             } else {
                 vscode.window.showErrorMessage('Failed to connect to server');
             }
-            this.refreshServersData('main');
+            // Force refresh the entire WebView after connection
+            setTimeout(() => {
+                this.forceRefreshWebView();
+            }, 500);
         } catch (error) {
             vscode.window.showErrorMessage(`Error connecting to server: ${error}`);
         }
@@ -249,6 +249,10 @@ export class WebViewManager {
         .status.connected {
             background-color: var(--vscode-testing-iconPassed);
             border-left-color: #4CAF50;
+        }
+        .status.connecting {
+            background-color: var(--vscode-testing-iconSkipped);
+            border-left-color: #FF9800;
         }
         .status.disconnected {
             background-color: var(--vscode-testing-iconSkipped);
@@ -458,9 +462,21 @@ export class WebViewManager {
             color: #4CAF50;
         }
 
+        .status.connecting {
+            background-color: rgba(255, 152, 0, 0.2);
+            color: #FF9800;
+            animation: pulse 1.5s infinite;
+        }
+
         .status.disconnected {
             background-color: rgba(244, 67, 54, 0.2);
             color: #f44336;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
 
         .service-type {
@@ -521,8 +537,10 @@ export class WebViewManager {
         // Message listener
         window.addEventListener('message', event => {
             const message = event.data;
+            console.log('WebView: Received message:', message);
             
             if (message.type === 'updateServices') {
+                console.log('WebView: Updating services with:', message.services);
                 renderServices(message.services);
             }
         });
@@ -539,14 +557,14 @@ export class WebViewManager {
                 <div class="service-card">
                     <div class="service-header">
                         <h3>\${service.name}</h3>
-                        <span class="status \${service.status === 'connected' ? 'connected' : 'disconnected'}">
+                        <span class="status \${service.status}">
                             \${service.status}
                         </span>
                     </div>
                     <div class="service-type">\${service.type}</div>
                     <div class="service-actions">
                         <button class="btn-connect" onclick="handleServiceAction('\${service.id}', '\${service.status}')">
-                            \${service.status === 'connected' ? '✓ Connected' : 'Connect'}
+                            \${service.status === 'connected' ? '✓ Connected' : service.status === 'connecting' ? '⏳ Connecting...' : 'Connect'}
                         </button>
                     </div>
                 </div>
@@ -559,6 +577,9 @@ export class WebViewManager {
                     command: 'disconnectService',
                     serviceId: serviceId
                 });
+            } else if (status === 'connecting') {
+                // Ignore clicks while connecting
+                return;
             } else {
                 vscode.postMessage({
                     command: 'connectService',
@@ -569,6 +590,53 @@ export class WebViewManager {
     </script>
 </body>
 </html>`;
+    }
+
+    private forceRefreshWebView(): void {
+        console.log('WebView: Force refreshing main dashboard');
+        const mainPanel = this.panels.get('main');
+        if (mainPanel) {
+            // Get current servers data
+            const servers = this.mcpManager.getAllServers();
+            console.log('WebView: Current servers data:', servers.map(s => ({ id: s.id, status: s.status })));
+            
+            // Reload the entire HTML content
+            mainPanel.webview.html = this.getMainDashboardHtml();
+            console.log('WebView: Main dashboard HTML reloaded');
+            
+            // Send updated data after HTML reload
+            setTimeout(() => {
+                this.sendServicesUpdate('main');
+            }, 100);
+        } else {
+            console.log('WebView: Main panel not found, cannot refresh');
+        }
+    }
+
+    public updateAllWebviews(): void {
+        console.log('WebView: updateAllWebviews called');
+        console.log('WebView: Active panels:', Array.from(this.panels.keys()));
+        
+        // Update all open webviews with latest server data
+        this.panels.forEach((panel, panelId) => {
+            if (panel && panel.webview) {
+                const servers = this.mcpManager.getAllServers();
+                console.log(`WebView: Updating panel ${panelId} with ${servers.length} servers`);
+                console.log(`WebView: Panel ${panelId} visible: ${panel.visible}`);
+                
+                try {
+                    panel.webview.postMessage({
+                        type: 'updateServices',
+                        services: servers
+                    });
+                    console.log(`WebView: Message sent to panel ${panelId}`);
+                } catch (error) {
+                    console.error(`WebView: Failed to send message to panel ${panelId}:`, error);
+                }
+            } else {
+                console.log(`WebView: Panel ${panelId} is null or has no webview`);
+            }
+        });
     }
 
     public dispose(): void {

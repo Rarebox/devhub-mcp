@@ -3,10 +3,12 @@ import { McpManager } from './mcpManager';
 import { createTreeView } from './treeView';
 import { registerCommands } from './commands';
 import { ClineIntegration } from './clineIntegration';
+import { WebViewManager } from './webview';
 import { DevHubState, McpServer, ServiceType, ServerStatus } from './types';
 
 let mcpManager: McpManager;
 let treeProvider: any;
+let webViewManager: WebViewManager;
 let clineIntegration: ClineIntegration;
 
 export function activate(context: vscode.ExtensionContext) {
@@ -155,13 +157,43 @@ export function activate(context: vscode.ExtensionContext) {
     // 3. Create and register TreeView
     treeProvider = createTreeView(context, mcpManager);
 
-    // 4. Register commands
-    registerCommands(context, mcpManager, treeProvider);
+    // 4. Initialize WebView Manager
+    webViewManager = new WebViewManager(mcpManager);
 
-    // 5. Initialize Cline integration
+    // 5. Register commands
+    registerCommands(context, mcpManager, treeProvider, webViewManager);
+
+    // 6. Initialize Cline integration
     clineIntegration = new ClineIntegration(mcpManager);
 
-    // 6. Welcome message
+    // 7. Setup event listeners for real-time sync
+    mcpManager.on('serverStatusChanged', (data: { serverId: string; status: ServerStatus }) => {
+        console.log(`Extension: Received serverStatusChanged event for ${data.serverId} with status ${data.status}`);
+        
+        // Update TreeView
+        treeProvider.refresh();
+        
+        // Update all open webviews
+        webViewManager.updateAllWebviews();
+    });
+
+    mcpManager.on('serverConfigUpdated', (server: McpServer) => {
+        // Update TreeView
+        treeProvider.refresh();
+        
+        // Update all open webviews
+        webViewManager.updateAllWebviews();
+    });
+
+    mcpManager.on('serverRegistered', (server: McpServer) => {
+        // Update TreeView
+        treeProvider.refresh();
+        
+        // Update all open webviews
+        webViewManager.updateAllWebviews();
+    });
+
+    // 8. Welcome message
     vscode.window.showInformationMessage('🚀 DevHub activated! View services in sidebar.');
 }
 

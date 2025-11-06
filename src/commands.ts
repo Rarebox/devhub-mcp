@@ -8,7 +8,8 @@ import { McpServer, ServiceType, ServerStatus } from './types';
 export function registerCommands(
     context: vscode.ExtensionContext,
     mcpManager: McpManager,
-    treeProvider: any
+    treeProvider: any,
+    webViewManager?: any
 ): void {
     // 1. devhub.openDashboard - Dashboard panel aç
     const openDashboard = vscode.commands.registerCommand('devhub.openDashboard', async () => {

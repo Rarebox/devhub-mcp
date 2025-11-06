@@ -123,6 +123,7 @@ export class McpManager extends EventEmitter {
                     server.status = ServerStatus.Connected;
                     this.activeConnections.set(serverId, this.githubServer);
                     console.log(`Successfully connected to ${server.name}`);
+                    console.log(`Emitting serverStatusChanged event for ${serverId} with status ${ServerStatus.Connected}`);
                     this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
                     return true;
                 } else {
@@ -350,6 +351,256 @@ export class McpManager extends EventEmitter {
                 }
             }
 
+            // Browser için gerçek connection
+            if (server.type === 'browser') {
+                const apiKey = await this.getBrowserApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.browserServer = new BrowserMcpServer();
+                const connected = await this.browserServer.connect(apiKey);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.browserServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.browserServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // Figma için gerçek connection
+            if (server.type === 'figma') {
+                const apiKey = await this.getFigmaApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.figmaServer = new FigmaMcpServer();
+                const connected = await this.figmaServer.connect(apiKey);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.figmaServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.figmaServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // Supabase için gerçek connection
+            if (server.type === 'supabase') {
+                const apiKey = await this.getSupabaseApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                const projectUrl = await vscode.window.showInputBox({
+                    prompt: 'Enter your Supabase Project URL',
+                    placeHolder: 'https://your-project.supabase.co',
+                    ignoreFocusOut: true,
+                    validateInput: (value) => {
+                        if (!value) {
+                            return 'Project URL is required';
+                        }
+                        if (!value.startsWith('https://') || !value.includes('.supabase.co')) {
+                            return 'Invalid format. Should be https://your-project.supabase.co';
+                        }
+                        return null;
+                    }
+                });
+
+                if (!projectUrl) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.supabaseServer = new SupabaseMcpServer();
+                const connected = await this.supabaseServer.connect(apiKey, projectUrl);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.supabaseServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.supabaseServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // Vercel için gerçek connection
+            if (server.type === 'vercel') {
+                const apiKey = await this.getVercelApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.vercelServer = new VercelMcpServer();
+                const connected = await this.vercelServer.connect(apiKey);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.vercelServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.vercelServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // Sentry için gerçek connection
+            if (server.type === 'sentry') {
+                const apiKey = await this.getSentryApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                const organizationSlug = await vscode.window.showInputBox({
+                    prompt: 'Enter your Sentry Organization Slug',
+                    placeHolder: 'your-organization',
+                    ignoreFocusOut: true,
+                    validateInput: (value) => {
+                        if (!value) {
+                            return 'Organization slug is required';
+                        }
+                        if (value.length < 2) {
+                            return 'Organization slug too short';
+                        }
+                        return null;
+                    }
+                });
+
+                if (!organizationSlug) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.sentryServer = new SentryMcpServer();
+                const connected = await this.sentryServer.connect(apiKey, organizationSlug);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.sentryServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.sentryServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // Taskmaster için gerçek connection
+            if (server.type === 'taskmaster') {
+                const apiKey = await this.getTaskmasterApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.taskmasterServer = new TaskmasterMcpServer();
+                const connected = await this.taskmasterServer.connect(apiKey);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.taskmasterServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.taskmasterServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // Desktop Commander için gerçek connection
+            if (server.type === 'desktop-commander') {
+                const apiKey = await this.getDesktopCommanderApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.desktopCommanderServer = new DesktopCommanderMcpServer();
+                const connected = await this.desktopCommanderServer.connect(apiKey);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.desktopCommanderServer);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.desktopCommanderServer = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
+            // 21st Dev için gerçek connection
+            if (server.type === '21st-dev') {
+                const apiKey = await this.get21stDevApiKey();
+                if (!apiKey) {
+                    server.status = ServerStatus.Disconnected;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Disconnected });
+                    return false;
+                }
+
+                this.dev21Server = new Dev21McpServer();
+                const connected = await this.dev21Server.connect(apiKey);
+
+                if (connected) {
+                    server.status = ServerStatus.Connected;
+                    this.activeConnections.set(serverId, this.dev21Server);
+                    console.log(`Successfully connected to ${server.name}`);
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
+                    return true;
+                } else {
+                    server.status = ServerStatus.Error;
+                    this.dev21Server = null;
+                    this.emit('serverStatusChanged', { serverId, status: ServerStatus.Error });
+                    return false;
+                }
+            }
+
             // Diğer servisler için simülasyon (şimdilik)
             await new Promise(resolve => setTimeout(resolve, 1000));
             server.status = ServerStatus.Connected;
@@ -432,6 +683,54 @@ export class McpManager extends EventEmitter {
             if (server.type === 'filesystem' && this.filesystemServer) {
                 await this.filesystemServer.disconnect();
                 this.filesystemServer = null;
+            }
+
+            // Browser için gerçek disconnect
+            if (server.type === 'browser' && this.browserServer) {
+                await this.browserServer.disconnect();
+                this.browserServer = null;
+            }
+
+            // Figma için gerçek disconnect
+            if (server.type === 'figma' && this.figmaServer) {
+                await this.figmaServer.disconnect();
+                this.figmaServer = null;
+            }
+
+            // Supabase için gerçek disconnect
+            if (server.type === 'supabase' && this.supabaseServer) {
+                await this.supabaseServer.disconnect();
+                this.supabaseServer = null;
+            }
+
+            // Vercel için gerçek disconnect
+            if (server.type === 'vercel' && this.vercelServer) {
+                await this.vercelServer.disconnect();
+                this.vercelServer = null;
+            }
+
+            // Sentry için gerçek disconnect
+            if (server.type === 'sentry' && this.sentryServer) {
+                await this.sentryServer.disconnect();
+                this.sentryServer = null;
+            }
+
+            // Taskmaster için gerçek disconnect
+            if (server.type === 'taskmaster' && this.taskmasterServer) {
+                await this.taskmasterServer.disconnect();
+                this.taskmasterServer = null;
+            }
+
+            // Desktop Commander için gerçek disconnect
+            if (server.type === 'desktop-commander' && this.desktopCommanderServer) {
+                await this.desktopCommanderServer.disconnect();
+                this.desktopCommanderServer = null;
+            }
+
+            // 21st Dev için gerçek disconnect
+            if (server.type === '21st-dev' && this.dev21Server) {
+                await this.dev21Server.disconnect();
+                this.dev21Server = null;
             }
 
             server.status = ServerStatus.Disconnected;
@@ -740,5 +1039,189 @@ export class McpManager extends EventEmitter {
 
     getFilesystemServer(): FilesystemMcpServer | null {
         return this.filesystemServer;
+    }
+
+    private async getBrowserApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Browser API Key',
+            password: true,
+            placeHolder: 'browser_... or any-key-for-browser-automation',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (value.length < 10) {
+                    return 'API key must be at least 10 characters';
+                }
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
+    getBrowserServer(): BrowserMcpServer | null {
+        return this.browserServer;
+    }
+
+    private async getFigmaApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Figma API Key',
+            password: true,
+            placeHolder: 'figd_... (Get from figma.com/developers/api)',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (!value.startsWith('figd_')) {
+                    return 'Invalid format. Should start with figd_';
+                }
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
+    getFigmaServer(): FigmaMcpServer | null {
+        return this.figmaServer;
+    }
+
+    private async getSupabaseApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Supabase API Key',
+            password: true,
+            placeHolder: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (value.length < 20) {
+                    return 'API key too short';
+                }
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
+    getSupabaseServer(): SupabaseMcpServer | null {
+        return this.supabaseServer;
+    }
+
+    private async getVercelApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Vercel API Key',
+            password: true,
+            placeHolder: 'VERCEL_TOKEN_... (Get from vercel.com/account/tokens)',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (!value.startsWith('VERCEL_TOKEN_')) {
+                    return 'Invalid format. Should start with VERCEL_TOKEN_';
+                }
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
+    getVercelServer(): VercelMcpServer | null {
+        return this.vercelServer;
+    }
+
+    private async getSentryApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Sentry API Key',
+            password: true,
+            placeHolder: 'https://...@sentry.io/...',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (!value.includes('sentry.io')) {
+                    return 'Invalid format. Should contain sentry.io';
+                }
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
+    getSentryServer(): SentryMcpServer | null {
+        return this.sentryServer;
+    }
+
+    private async getTaskmasterApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Taskmaster API Key',
+            password: true,
+            placeHolder: 'tm_... or any-key-for-task-management',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (value.length < 10) {
+                    return 'API key must be at least 10 characters';
+                }
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
+    getTaskmasterServer(): TaskmasterMcpServer | null {
+        return this.taskmasterServer;
+    }
+
+    private async getDesktopCommanderApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Desktop Commander API Key',
+            password: true,
+            placeHolder: 'dc_... or any-key-for-desktop-control',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (value.length < 10) {
+                    return 'API key must be at least 10 characters';
+                }
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
+    getDesktopCommanderServer(): DesktopCommanderMcpServer | null {
+        return this.desktopCommanderServer;
+    }
+
+    private async get21stDevApiKey(): Promise<string | undefined> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your 21st Dev API Key',
+            password: true,
+            placeHolder: '21st_... or any-key-for-code-generation',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value) {
+                    return 'API key is required';
+                }
+                if (value.length < 10) {
+                    return 'API key must be at least 10 characters';
+                }
+                return null;
+            }
+        });
+        return apiKey;
+    }
+
+    get21stDevServer(): Dev21McpServer | null {
+        return this.dev21Server;
     }
 }

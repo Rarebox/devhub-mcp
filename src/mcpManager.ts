@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events';
-import { McpServer, ServerStatus, DevHubState } from './types';
+import { McpServer, ServerStatus, DevHubState, ServiceType } from './types';
 import { GitHubMcpServer } from './mcp-servers/github';
 import { MongoDBMcpServer } from './mcp-servers/mongodb';
 import { StripeMcpServer } from './mcp-servers/stripe';
@@ -75,11 +75,37 @@ export class McpManager extends EventEmitter {
         }
     }
 
+    private getApiKeyUrl(type: ServiceType): string {
+        const urls: Record<string, string> = {
+            'github': 'https://github.com/settings/tokens',
+            'mongodb': 'https://cloud.mongodb.com/v2#/clusters',
+            'stripe': 'https://dashboard.stripe.com/apikeys',
+            'lemonsqueezy': 'https://app.lemonsqueezy.com/settings/api',
+            'auth': 'https://console.cloud.google.com/apis/credentials',
+            'context7': 'https://context7.dev/dashboard',
+            'sequential-thinking': 'https://sequential-thinking.dev/api-keys',
+            'firecrawl': 'https://firecrawl.dev/app/api-keys',
+            'filesystem': '', // Local, no API key needed
+            'browser': 'https://chromedevtools.github.io/devtools-protocol/',
+            'figma': 'https://www.figma.com/developers/api#access-tokens',
+            'supabase': 'https://supabase.com/dashboard/project/_/settings/api',
+            'vercel': 'https://vercel.com/account/tokens',
+            'sentry': 'https://sentry.io/settings/account/api/auth-tokens/',
+            'taskmaster': 'https://taskmaster.io/settings/api',
+            'desktop-commander': '', // Local system access
+            '21st-dev': 'https://21st.dev/api-keys'
+        };
+        return urls[type] || '';
+    }
+
     public registerServer(server: McpServer): void {
         try {
             if (!server.id || !server.name) {
                 throw new Error('Server must have id and name');
             }
+
+            // API key URL'i ekle
+            server.apiKeyUrl = this.getApiKeyUrl(server.type);
 
             this.servers.set(server.id, server);
             this.state.servers = Array.from(this.servers.values());

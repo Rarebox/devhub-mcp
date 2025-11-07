@@ -35,6 +35,7 @@ export interface McpServer {
   config: Record<string, any>;
   lastConnected?: Date;
   error?: string;
+  apiKeyUrl?: string;  // ← YENİ
 }
 
 export interface McpServerConfig {

@@ -106,6 +106,9 @@ export class WebViewManager {
                 case 'testConnection':
                     this.testServerConnection(message.data?.serverId);
                     break;
+                case 'openExternal':
+                    vscode.env.openExternal(vscode.Uri.parse(message.url));
+                    break;
                 default:
                     console.warn(`Unknown message type: ${message.command || message.type}`);
             }
@@ -515,6 +518,29 @@ export class WebViewManager {
             border-radius: 6px;
             margin-bottom: 20px;
         }
+
+        .service-info {
+            margin-bottom: 10px;
+        }
+
+        .api-key-link {
+            display: inline-block;
+            color: #1E90FF;
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .api-key-link:hover {
+            background: rgba(30, 144, 255, 0.1);
+            text-decoration: underline;
+        }
+
+        .api-key-link::before {
+            content: '🔑 ';
+        }
     </style>
 </head>
 <body>
@@ -562,6 +588,15 @@ export class WebViewManager {
                         </span>
                     </div>
                     <div class="service-type">\${service.type}</div>
+                    <div class="service-info">
+                        \${service.apiKeyUrl ? \`
+                            <a href="\${service.apiKeyUrl}" 
+                               class="api-key-link" 
+                               onclick="openExternalLink('\${service.apiKeyUrl}'); return false;">
+                                Get API Key
+                            </a>
+                        \` : ''}
+                    </div>
                     <div class="service-actions">
                         <button class="btn-connect" onclick="handleServiceAction('\${service.id}', '\${service.status}')">
                             \${service.status === 'connected' ? '✓ Connected' : service.status === 'connecting' ? '⏳ Connecting...' : 'Connect'}
@@ -569,6 +604,13 @@ export class WebViewManager {
                     </div>
                 </div>
             \`).join('');
+        }
+        
+        function openExternalLink(url) {
+            vscode.postMessage({
+                command: 'openExternal',
+                url: url
+            });
         }
         
         function handleServiceAction(serviceId, status) {

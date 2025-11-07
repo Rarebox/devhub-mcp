@@ -4,7 +4,8 @@ export class ConfigurationPanel {
     public static createPanel(
         extensionUri: vscode.Uri,
         serverId: string,
-        serverName: string
+        serverName: string,
+        apiKeyUrl?: string  // ← YENİ
     ): vscode.WebviewPanel {
         const panel = vscode.window.createWebviewPanel(
             'devhubConfig',
@@ -13,11 +14,11 @@ export class ConfigurationPanel {
             { enableScripts: true }
         );
 
-        panel.webview.html = this.getWebviewContent(serverName);
+        panel.webview.html = this.getWebviewContent(serverName, apiKeyUrl);
         return panel;
     }
 
-    private static getWebviewContent(serverName: string): string {
+    private static getWebviewContent(serverName: string, apiKeyUrl?: string): string {
         return `<!DOCTYPE html>
 <html>
 <head>
@@ -96,6 +97,15 @@ export class ConfigurationPanel {
         
         <div class="info-box">
             <p>Enter your ${serverName} credentials to connect.</p>
+            ${apiKeyUrl ? `
+                <p style="margin-top: 10px;">
+                    <a href="${apiKeyUrl}" 
+                       style="color: #1E90FF; text-decoration: none;"
+                       onclick="window.open('${apiKeyUrl}'); return false;">
+                        🔑 Get your API key here →
+                    </a>
+                </p>
+            ` : ''}
         </div>
         
         <form id="configForm">

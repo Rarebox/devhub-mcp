@@ -220,7 +220,8 @@ export function registerCommands(
             const panel = ConfigurationPanel.createPanel(
                 context.extensionUri,
                 serverId,
-                server.name
+                server.name,
+                server.apiKeyUrl  // ← YENİ
             );
             
             // Message listener

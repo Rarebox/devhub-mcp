@@ -493,4 +493,5 @@ export function registerCommands(
     );
     
     console.log('DevHub commands registered successfully');
+    console.log('Registered commands count:', context.subscriptions.length);
 }

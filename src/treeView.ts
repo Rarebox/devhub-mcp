@@ -24,10 +24,12 @@ export class DevHubTreeDataProvider implements vscode.TreeDataProvider<vscode.Tr
     }
 
     public async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
+        console.log('TreeView getChildren called, element:', element);
         
         // Root level (no element) - Show all servers
         if (!element) {
             const servers = this.mcpManager.getAllServers();
+            console.log('TreeView: Found servers:', servers.length);
             return servers.map(server => {
                 const treeItem = new vscode.TreeItem(
                     server.name,

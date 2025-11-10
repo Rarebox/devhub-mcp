@@ -2,8 +2,8 @@
   "name": "devhub-mcp",
   "publisher": "caglarusta",
   "displayName": "DevHub - Multi-Service Dashboard",
-  "description": "Manage multiple developer services from one dashboard with MCP integration",
-  "version": "0.0.1",
+  "description": "Complete MCP integration platform with 17 developer services. Build, deploy, and monitor apps faster.",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -19,10 +19,23 @@
     "mongodb",
     "stripe",
     "lemonsqueezy",
-    "cline",
-    "multi-service",
-    "devops"
+    "vercel",
+    "supabase",
+    "figma",
+    "sentry",
+    "deployment",
+    "automation",
+    "17-services"
   ],
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rarebox/devhub-mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/Rarebox/devhub-mcp/issues"
+  },
+  "homepage": "https://github.com/Rarebox/devhub-mcp/blob/master/README.md",
   "activationEvents": [
     "onView:devhubDashboard",
     "onCommand:devhub.openDashboard",
@@ -217,10 +230,6 @@
         "mac": "cmd+shift+r"
       }
     ]
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/your-username/devhub-mcp.git"
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

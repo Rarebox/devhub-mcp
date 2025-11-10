@@ -13,6 +13,7 @@ let clineIntegration: ClineIntegration;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('DevHub extension is now active!');
+    console.log('Extension context:', context.extensionPath);
 
     // 1. Initialize MCP Manager
     mcpManager = new McpManager(context);

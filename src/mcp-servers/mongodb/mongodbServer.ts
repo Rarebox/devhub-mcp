@@ -129,6 +129,103 @@ export class MongoDBMcpServer {
         }
     }
 
+    async getDatabaseInfo(databaseName: string): Promise<any> {
+        if (!this.client || !this.isConnected) {
+            throw new Error('Not connected to MongoDB');
+        }
+
+        try {
+            const db = this.client.db(databaseName);
+            const collections = await db.listCollections().toArray();
+            const stats = await (db as any).stats();
+            
+            return {
+                name: databaseName,
+                collections: collections.length,
+                dataSize: stats.dataSize,
+                storageSize: stats.storageSize,
+                indexes: stats.indexes,
+                indexSize: stats.indexSize,
+                objects: stats.objects
+            };
+            
+        } catch (error) {
+            console.error('Error getting database info:', error);
+            throw error;
+        }
+    }
+
+    async getCollectionStats(databaseName: string, collectionName: string): Promise<any> {
+        if (!this.client || !this.isConnected) {
+            throw new Error('Not connected to MongoDB');
+        }
+
+        try {
+            const db = this.client.db(databaseName);
+            const collection = db.collection(collectionName);
+            const stats = await collection.stats();
+            
+            return {
+                database: databaseName,
+                collection: collectionName,
+                count: stats.count,
+                size: stats.size,
+                avgObjSize: stats.avgObjSize,
+                storageSize: stats.storageSize,
+                indexes: stats.nindexes,
+                indexSizes: stats.indexSizes
+            };
+            
+        } catch (error) {
+            console.error('Error getting collection stats:', error);
+            throw error;
+        }
+    }
+
+    async executeQuery(databaseName: string, collectionName: string, query: any, limit?: number): Promise<any[]> {
+        if (!this.client || !this.isConnected) {
+            throw new Error('Not connected to MongoDB');
+        }
+
+        try {
+            const db = this.client.db(databaseName);
+            const collection = db.collection(collectionName);
+            
+            let cursor = collection.find(query);
+            if (limit) {
+                cursor = cursor.limit(limit);
+            }
+            
+            const results = await cursor.toArray();
+            return results;
+            
+        } catch (error) {
+            console.error('Error executing query:', error);
+            throw error;
+        }
+    }
+
+    async insertDocument(databaseName: string, collectionName: string, document: any): Promise<any> {
+        if (!this.client || !this.isConnected) {
+            throw new Error('Not connected to MongoDB');
+        }
+
+        try {
+            const db = this.client.db(databaseName);
+            const collection = db.collection(collectionName);
+            
+            const result = await collection.insertOne(document);
+            return {
+                insertedId: result.insertedId,
+                acknowledged: result.acknowledged
+            };
+            
+        } catch (error) {
+            console.error('Error inserting document:', error);
+            throw error;
+        }
+    }
+
     async getStats(): Promise<MongoDBStats> {
         if (!this.client || !this.isConnected) {
             throw new Error('Not connected to MongoDB');

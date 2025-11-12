@@ -187,7 +187,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             'productId is required'
           );
         }
-        const product = await lemonsqueezyServer.getProduct(args.productId);
+        const product = await lemonsqueezyServer.getProduct(args.productId as string);
         return {
           content: [
             {
@@ -217,7 +217,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             'orderId is required'
           );
         }
-        const order = await lemonsqueezyServer.getOrder(args.orderId);
+        const order = await lemonsqueezyServer.getOrder(args.orderId as string);
         return {
           content: [
             {
@@ -247,7 +247,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             'customerId is required'
           );
         }
-        const customer = await lemonsqueezyServer.getCustomer(args.customerId);
+        const customer = await lemonsqueezyServer.getCustomer(args.customerId as string);
         return {
           content: [
             {
@@ -266,9 +266,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           );
         }
         const checkout = await lemonsqueezyServer.createCheckout(
-          args.productId,
-          args?.customerEmail,
-          args?.variantId
+          args.productId as string,
+          args?.customerEmail as string,
+          args?.variantId as string
         );
         return {
           content: [

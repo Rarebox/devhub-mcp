@@ -163,17 +163,17 @@ export class MongoDBMcpServer {
         try {
             const db = this.client.db(databaseName);
             const collection = db.collection(collectionName);
-            const stats = await collection.stats();
+            const count = await collection.estimatedDocumentCount();
             
             return {
                 database: databaseName,
                 collection: collectionName,
-                count: stats.count,
-                size: stats.size,
-                avgObjSize: stats.avgObjSize,
-                storageSize: stats.storageSize,
-                indexes: stats.nindexes,
-                indexSizes: stats.indexSizes
+                count: count,
+                size: 0,
+                avgObjSize: 0,
+                storageSize: 0,
+                indexes: 0,
+                indexSizes: {}
             };
             
         } catch (error) {

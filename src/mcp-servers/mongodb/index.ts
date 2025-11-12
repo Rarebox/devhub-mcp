@@ -180,7 +180,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             'databaseName is required'
           );
         }
-        const info = await mongodbServer.getDatabaseInfo(args.databaseName);
+        const info = await mongodbServer.getDatabaseInfo(args.databaseName as string);
         return {
           content: [
             {
@@ -198,7 +198,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             'databaseName is required'
           );
         }
-        const collections = await mongodbServer.listCollections(args.databaseName);
+        const collections = await mongodbServer.listCollections(args.databaseName as string);
         return {
           content: [
             {
@@ -216,7 +216,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             'databaseName and collectionName are required'
           );
         }
-        const stats = await mongodbServer.getCollectionStats(args.databaseName, args.collectionName);
+        const stats = await mongodbServer.getCollectionStats(args.databaseName as string, args.collectionName as string);
         return {
           content: [
             {
@@ -228,17 +228,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'execute_query': {
-        if (!args?.databaseName || !args?.collectionName || !args?.query) {
+        if (!args?.databaseName || !args?.collectionName) {
           throw new McpError(
             ErrorCode.InvalidParams,
-            'databaseName, collectionName, and query are required'
+            'databaseName and collectionName are required'
           );
         }
         const results = await mongodbServer.executeQuery(
-          args.databaseName,
-          args.collectionName,
-          args.query,
-          args?.limit
+          args.databaseName as string,
+          args.collectionName as string,
+          args.query || {},
+          args?.limit as number
         );
         return {
           content: [
@@ -258,8 +258,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           );
         }
         const result = await mongodbServer.insertDocument(
-          args.databaseName,
-          args.collectionName,
+          args.databaseName as string,
+          args.collectionName as string,
           args.document
         );
         return {

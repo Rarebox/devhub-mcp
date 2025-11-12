@@ -218,9 +218,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           );
         }
         const customer = await stripeServer.createCustomer(
-          args.email,
-          args?.name,
-          args?.description
+          args.email as string,
+          args?.name as string,
+          args?.description as string
         );
         return {
           content: [
@@ -239,7 +239,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             'customerId is required'
           );
         }
-        const customer = await stripeServer.getCustomer(args.customerId);
+        const customer = await stripeServer.getCustomer(args.customerId as string);
         return {
           content: [
             {
@@ -251,7 +251,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'list_charges': {
-        const charges = await stripeServer.listCharges(args?.limit as number, args?.customerId as string);
+        const charges = await stripeServer.listCharges();
         return {
           content: [
             {
@@ -263,36 +263,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'create_charge': {
-        if (!args?.amount) {
+        if (!args?.amount || !args?.currency || !args?.source) {
           throw new McpError(
             ErrorCode.InvalidParams,
-            'amount is required'
+            'amount, currency, and source are required'
           );
         }
         const charge = await stripeServer.createCharge(
-          args.amount,
-          args?.currency || 'usd',
-          args?.source,
-          args?.description,
-          args?.customerId
+          args.amount as number,
+          args.currency as string,
+          args.source as string,
+          args?.description as string
         );
         return {
           content: [
             {
               type: 'text',
               text: JSON.stringify(charge, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'list_products': {
-        const products = await stripeServer.listProducts(args?.limit as number);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(products, null, 2),
             },
           ],
         };
@@ -306,16 +293,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           );
         }
         const product = await stripeServer.createProduct(
-          args.name,
-          args?.description,
-          args?.price,
-          args?.currency || 'usd'
+          args.name as string,
+          args?.description as string
         );
         return {
           content: [
             {
               type: 'text',
               text: JSON.stringify(product, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'list_products': {
+        const products = await stripeServer.listProducts(args?.limit as number);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(products, null, 2),
             },
           ],
         };

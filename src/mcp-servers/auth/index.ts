@@ -223,7 +223,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
         // Simulate OAuth URL creation
         const oauthUrl = {
-          url: `https://${args.provider}.com/oauth/authorize?client_id=${args.clientId}&redirect_uri=${encodeURIComponent(args.redirectUri)}&response_type=code`,
+          url: `https://${args.provider as string}.com/oauth/authorize?client_id=${args.clientId as string}&redirect_uri=${encodeURIComponent(args.redirectUri as string)}&response_type=code`,
           provider: args.provider,
           scopes: args?.scopes || []
         };
@@ -292,7 +292,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             'provider and accessToken are required'
           );
         }
-        const validation = await authServer.validateToken(args.accessToken);
+        const validation = await authServer.validateToken(args.accessToken as string);
         return {
           content: [
             {

@@ -3,13 +3,15 @@ import { McpManager } from './mcpManager';
 import { DevHubTreeDataProvider } from './treeView';
 import { createDashboard } from './webview';
 import { ConfigurationPanel } from './ui/configurationPanel';
+import { ClineIntegration } from './clineIntegration';
 import { McpServer, ServiceType, ServerStatus } from './types';
 
 export function registerCommands(
     context: vscode.ExtensionContext,
     mcpManager: McpManager,
     treeProvider: any,
-    webViewManager?: any
+    webViewManager?: any,
+    clineIntegration?: ClineIntegration
 ): void {
     // 1. devhub.openDashboard - Dashboard panel aç
     const openDashboard = vscode.commands.registerCommand('devhub.openDashboard', async () => {
@@ -477,6 +479,36 @@ export function registerCommands(
         }
     });
 
+    // 12. devhub.syncToCline - Tüm bağlı server'ları Cline'e sync et
+    const syncToCline = vscode.commands.registerCommand('devhub.syncToCline', async () => {
+        try {
+            if (!clineIntegration) {
+                vscode.window.showErrorMessage('Cline integration not available');
+                return;
+            }
+
+            await clineIntegration.syncAllConnectedServers();
+        } catch (error) {
+            console.error('Error syncing to Cline:', error);
+            vscode.window.showErrorMessage(`Failed to sync to Cline: ${error}`);
+        }
+    });
+
+    // 13. devhub.showClineStatus - Cline settings durumunu göster
+    const showClineStatus = vscode.commands.registerCommand('devhub.showClineStatus', async () => {
+        try {
+            if (!clineIntegration) {
+                vscode.window.showErrorMessage('Cline integration not available');
+                return;
+            }
+
+            await clineIntegration.showClineSettingsStatus();
+        } catch (error) {
+            console.error('Error showing Cline status:', error);
+            vscode.window.showErrorMessage(`Failed to show Cline status: ${error}`);
+        }
+    });
+
     // Tüm command'ları context.subscriptions'a push et
     context.subscriptions.push(
         openDashboard,
@@ -489,7 +521,9 @@ export function registerCommands(
         showServerInfo,
         connectAll,
         disconnectAll,
-        listGitHubRepos
+        listGitHubRepos,
+        syncToCline,
+        showClineStatus
     );
     
     console.log('DevHub commands registered successfully');

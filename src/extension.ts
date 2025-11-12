@@ -162,7 +162,7 @@ export function activate(context: vscode.ExtensionContext) {
     webViewManager = new WebViewManager(mcpManager);
 
     // 5. Register commands
-    registerCommands(context, mcpManager, treeProvider, webViewManager);
+    registerCommands(context, mcpManager, treeProvider, webViewManager, clineIntegration);
 
     // 6. Initialize Cline integration
     clineIntegration = new ClineIntegration(mcpManager);

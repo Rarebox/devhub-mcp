@@ -109,6 +109,18 @@
         "title": "List GitHub Repositories",
         "category": "DevHub",
         "icon": "$(repo)"
+      },
+      {
+        "command": "devhub.syncToCline",
+        "title": "Sync to Cline",
+        "category": "DevHub",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "devhub.showClineStatus",
+        "title": "Show Cline Status",
+        "category": "DevHub",
+        "icon": "$(info)"
       }
     ],
     "viewsContainers": {
@@ -215,6 +227,14 @@
         {
           "command": "devhub.listGitHubRepos",
           "when": "true"
+        },
+        {
+          "command": "devhub.syncToCline",
+          "when": "true"
+        },
+        {
+          "command": "devhub.showClineStatus",
+          "when": "true"
         }
       ]
     },
@@ -240,19 +260,20 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@types/mocha": "^10.0.1",
     "@types/node": "18.x",
+    "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
-    "eslint": "^8.54.0",
-    "mocha": "^10.2.0",
-    "typescript": "^5.3.0",
     "@vscode/test-electron": "^2.3.8",
-    "glob": "^10.3.10"
+    "eslint": "^8.54.0",
+    "glob": "^10.3.10",
+    "mocha": "^10.2.0",
+    "typescript": "^5.3.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@cfworker/json-schema": "^4.1.1",
+    "@modelcontextprotocol/sdk": "^1.21.1",
     "@octokit/rest": "^20.0.2",
     "axios": "^1.6.2",
     "mongodb": "^6.8.0"

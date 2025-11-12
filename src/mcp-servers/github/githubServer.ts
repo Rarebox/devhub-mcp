@@ -78,15 +78,16 @@ export class GitHubMcpServer {
         return this.isConnected;
     }
 
-    async listRepositories(): Promise<GitHubRepository[]> {
+    async listRepositories(type: string = 'all', sort: string = 'updated', per_page: number = 30): Promise<GitHubRepository[]> {
         if (!this.octokit || !this.isConnected) {
             throw new Error('Not connected to GitHub');
         }
 
         try {
             const { data } = await this.octokit.repos.listForAuthenticatedUser({
-                sort: 'updated',
-                per_page: 30
+                type: type as any,
+                sort: sort as any,
+                per_page
             });
 
             return data.map((repo: any) => ({
@@ -107,7 +108,7 @@ export class GitHubMcpServer {
         }
     }
 
-    async listPullRequests(owner: string, repo: string): Promise<GitHubPullRequest[]> {
+    async listPullRequests(owner: string, repo: string, state: string = 'open'): Promise<GitHubPullRequest[]> {
         if (!this.octokit || !this.isConnected) {
             throw new Error('Not connected to GitHub');
         }
@@ -116,7 +117,7 @@ export class GitHubMcpServer {
             const { data } = await this.octokit.pulls.list({
                 owner,
                 repo,
-                state: 'open',
+                state: state as any,
                 per_page: 30
             });
 
@@ -166,6 +167,108 @@ export class GitHubMcpServer {
         } catch (error) {
             console.error('Error getting repository:', error);
             return null;
+        }
+    }
+
+    async createPullRequest(owner: string, repo: string, title: string, head: string, base: string, body?: string): Promise<GitHubPullRequest> {
+        if (!this.octokit || !this.isConnected) {
+            throw new Error('Not connected to GitHub');
+        }
+
+        try {
+            const { data } = await this.octokit.pulls.create({
+                owner,
+                repo,
+                title,
+                head,
+                base,
+                body
+            });
+
+            return {
+                id: data.id,
+                number: data.number,
+                title: data.title,
+                state: data.state,
+                created_at: data.created_at,
+                updated_at: data.updated_at,
+                user: {
+                    login: data.user?.login || 'unknown',
+                    avatar_url: data.user?.avatar_url || ''
+                },
+                html_url: data.html_url
+            };
+            
+        } catch (error) {
+            console.error('Error creating pull request:', error);
+            throw error;
+        }
+    }
+
+    async listIssues(owner: string, repo: string, state: string = 'open'): Promise<any[]> {
+        if (!this.octokit || !this.isConnected) {
+            throw new Error('Not connected to GitHub');
+        }
+
+        try {
+            const { data } = await this.octokit.issues.listForRepo({
+                owner,
+                repo,
+                state: state as any
+            });
+
+            return data.map((issue: any) => ({
+                id: issue.id,
+                number: issue.number,
+                title: issue.title,
+                state: issue.state,
+                created_at: issue.created_at,
+                updated_at: issue.updated_at,
+                user: {
+                    login: issue.user?.login || 'unknown',
+                    avatar_url: issue.user?.avatar_url || ''
+                },
+                html_url: issue.html_url,
+                body: issue.body
+            }));
+            
+        } catch (error) {
+            console.error('Error listing issues:', error);
+            throw error;
+        }
+    }
+
+    async createIssue(owner: string, repo: string, title: string, body?: string): Promise<any> {
+        if (!this.octokit || !this.isConnected) {
+            throw new Error('Not connected to GitHub');
+        }
+
+        try {
+            const { data } = await this.octokit.issues.create({
+                owner,
+                repo,
+                title,
+                body
+            });
+
+            return {
+                id: data.id,
+                number: data.number,
+                title: data.title,
+                state: data.state,
+                created_at: data.created_at,
+                updated_at: data.updated_at,
+                user: {
+                    login: data.user?.login || 'unknown',
+                    avatar_url: data.user?.avatar_url || ''
+                },
+                html_url: data.html_url,
+                body: data.body
+            };
+            
+        } catch (error) {
+            console.error('Error creating issue:', error);
+            throw error;
         }
     }
 

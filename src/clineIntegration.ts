@@ -1,17 +1,33 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
 import { McpManager } from './mcpManager';
-import { ClineIntegration as IClineIntegration } from './types';
+import { McpServer, ServiceType, ServerStatus } from './types';
+
+interface ClineMcpSettings {
+    mcpServers: {
+        [serverName: string]: {
+            command?: string;
+            args?: string[];
+            url?: string;
+            env?: { [key: string]: string };
+            disabled?: boolean;
+            autoApprove?: string[];
+        };
+    };
+}
 
 export class ClineIntegration {
     private mcpManager: McpManager;
-    private config: IClineIntegration;
     private statusBarItem: vscode.StatusBarItem;
+    private clineSettingsPath: string;
 
     constructor(mcpManager: McpManager) {
         this.mcpManager = mcpManager;
-        this.config = {
-            enabled: false
-        };
+        
+        // Get Cline settings path (cross-platform)
+        this.clineSettingsPath = this.getClineSettingsPath();
         
         this.statusBarItem = vscode.window.createStatusBarItem(
             vscode.StatusBarAlignment.Right,
@@ -20,234 +36,441 @@ export class ClineIntegration {
         
         this.updateStatusBar();
         this.statusBarItem.show();
-    }
-
-    public async enableIntegration(serverUrl: string, apiKey: string): Promise<boolean> {
-        try {
-            // Validate inputs
-            if (!serverUrl || !apiKey) {
-                throw new Error('Server URL and API key are required');
-            }
-
-            // Test connection to Cline server
-            const isConnected = await this.testClineConnection(serverUrl, apiKey);
-            
-            if (isConnected) {
-                this.config = {
-                    enabled: true,
-                    serverUrl,
-                    apiKey
-                };
-
-                // Setup event listeners for MCP manager
-                this.setupEventListeners();
-                
-                this.updateStatusBar();
-                vscode.window.showInformationMessage('Cline integration enabled successfully');
-                return true;
-            } else {
-                throw new Error('Failed to connect to Cline server');
-            }
-        } catch (error) {
-            vscode.window.showErrorMessage(`Failed to enable Cline integration: ${error}`);
-            return false;
-        }
-    }
-
-    public disableIntegration(): void {
-        this.config = {
-            enabled: false
-        };
         
-        this.updateStatusBar();
-        vscode.window.showInformationMessage('Cline integration disabled');
+        // Setup event listeners for MCP manager
+        this.setupEventListeners();
     }
 
-    public isEnabled(): boolean {
-        return this.config.enabled;
-    }
-
-    public getConfig(): IClineIntegration {
-        return { ...this.config };
-    }
-
-    private async testClineConnection(serverUrl: string, apiKey: string): Promise<boolean> {
-        try {
-            // Simulate connection test (in real implementation, this would make actual HTTP request)
-            console.log(`Testing Cline connection to ${serverUrl}...`);
-            
-            // Simulate async connection test
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // For now, always return true (in real implementation, validate actual connection)
-            return true;
-        } catch (error) {
-            console.error('Cline connection test failed:', error);
-            return false;
+    private getClineSettingsPath(): string {
+        const homeDir = os.homedir();
+        const platform = os.platform();
+        
+        switch (platform) {
+            case 'darwin': // macOS
+                return path.join(
+                    homeDir,
+                    'Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json'
+                );
+            case 'win32': // Windows
+                return path.join(
+                    homeDir,
+                    'AppData/Roaming/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json'
+                );
+            case 'linux': // Linux
+                return path.join(
+                    homeDir,
+                    '.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json'
+                );
+            default:
+                // Fallback to macOS style
+                return path.join(
+                    homeDir,
+                    'Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json'
+                );
         }
+    }
+
+    private getExtensionPath(): string {
+        // Get the extension installation path from VS Code
+        const extension = vscode.extensions.getExtension('caglarusta.devhub-mcp');
+        if (extension) {
+            return extension.extensionPath;
+        }
+        
+        // Fallback to development path
+        return path.join(__dirname, '..');
     }
 
     private setupEventListeners(): void {
-        if (!this.config.enabled) {
-            return;
-        }
-
-        // Listen to MCP manager events and forward to Cline
-        this.mcpManager.on('serverStatusChanged', (server) => {
-            this.forwardToCline('serverStatusChanged', {
-                serverId: server.id,
-                status: server.status,
-                timestamp: new Date().toISOString()
-            });
+        // Listen to MCP manager events
+        this.mcpManager.on('serverStatusChanged', (data: { serverId: string; status: ServerStatus }) => {
+            console.log(`ClineIntegration: Server status changed - ${data.serverId}: ${data.status}`);
+            
+            if (data.status === ServerStatus.Connected) {
+                this.addServerToClineSettings(data.serverId);
+            } else if (data.status === ServerStatus.Disconnected) {
+                this.removeServerFromClineSettings(data.serverId);
+            }
         });
 
-        this.mcpManager.on('serverRegistered', (server) => {
-            this.forwardToCline('serverRegistered', {
-                serverId: server.id,
-                name: server.name,
-                type: server.type,
-                timestamp: new Date().toISOString()
-            });
+        this.mcpManager.on('serverRegistered', (server: McpServer) => {
+            console.log(`ClineIntegration: Server registered - ${server.id}`);
         });
 
-        this.mcpManager.on('serverConfigUpdated', (server) => {
-            this.forwardToCline('serverConfigUpdated', {
-                serverId: server.id,
-                config: server.config,
-                timestamp: new Date().toISOString()
-            });
+        this.mcpManager.on('serverConfigUpdated', (server: McpServer) => {
+            console.log(`ClineIntegration: Server config updated - ${server.id}`);
+            if (server.status === ServerStatus.Connected) {
+                this.addServerToClineSettings(server.id);
+            }
         });
     }
 
-    private async forwardToCline(event: string, data: any): Promise<void> {
-        if (!this.config.enabled || !this.config.serverUrl || !this.config.apiKey) {
-            return;
-        }
-
+    private async addServerToClineSettings(serverId: string): Promise<void> {
         try {
-            // In real implementation, this would make HTTP request to Cline server
-            console.log(`Forwarding event ${event} to Cline:`, data);
+            const server = this.mcpManager.getServerById(serverId);
+            if (!server) {
+                console.error(`Server not found: ${serverId}`);
+                return;
+            }
+
+            // Read current Cline settings
+            let settings: ClineMcpSettings;
+            try {
+                const settingsContent = fs.readFileSync(this.clineSettingsPath, 'utf8');
+                settings = JSON.parse(settingsContent);
+            } catch (error) {
+                // File doesn't exist or is invalid, create new
+                settings = { mcpServers: {} };
+            }
+
+            // Create MCP server configuration for DevHub
+            const mcpServerConfig = this.createMcpServerConfig(server);
             
-            // Simulate HTTP request
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Add to Cline settings
+            settings.mcpServers[`devhub-${serverId}`] = mcpServerConfig;
+
+            // Write back to file
+            await this.writeClineSettings(settings);
             
+            console.log(`Added devhub-${serverId} to Cline MCP settings`);
+            vscode.window.showInformationMessage(
+                `✅ ${server.name} added to Cline MCP servers!`
+            );
+
         } catch (error) {
-            console.error(`Failed to forward event ${event} to Cline:`, error);
+            console.error(`Failed to add server ${serverId} to Cline settings:`, error);
+            vscode.window.showErrorMessage(
+                `Failed to add ${serverId} to Cline: ${error}`
+            );
+        }
+    }
+
+    private async removeServerFromClineSettings(serverId: string): Promise<void> {
+        try {
+            // Read current Cline settings
+            let settings: ClineMcpSettings;
+            try {
+                const settingsContent = fs.readFileSync(this.clineSettingsPath, 'utf8');
+                settings = JSON.parse(settingsContent);
+            } catch (error) {
+                return; // File doesn't exist, nothing to remove
+            }
+
+            // Remove from Cline settings
+            delete settings.mcpServers[`devhub-${serverId}`];
+
+            // Write back to file
+            await this.writeClineSettings(settings);
+            
+            console.log(`Removed devhub-${serverId} from Cline MCP settings`);
+
+        } catch (error) {
+            console.error(`Failed to remove server ${serverId} from Cline settings:`, error);
+        }
+    }
+
+    private createMcpServerConfig(server: McpServer): any {
+        const baseConfig = {
+            disabled: false,
+            autoApprove: []
+        };
+
+        // Get extension path for correct file paths
+        const extensionPath = this.getExtensionPath();
+        const outPath = path.join(extensionPath, 'out');
+
+        switch (server.type) {
+            case ServiceType.GitHub:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/github/index.js')],
+                    env: {
+                        GITHUB_TOKEN: server.config.token || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.MongoDB:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/mongodb/index.js')],
+                    env: {
+                        MONGODB_CONNECTION_STRING: server.config.connectionString || '',
+                        MONGODB_DATABASE: server.config.database || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.Stripe:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/stripe/index.js')],
+                    env: {
+                        STRIPE_API_KEY: server.config.apiKey || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.LemonSqueezy:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/lemonsqueezy/index.js')],
+                    env: {
+                        LEMONSQUEEZY_API_KEY: server.config.apiKey || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.Auth:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/auth/index.js')],
+                    env: {
+                        AUTH_API_KEY: server.config.apiKey || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.Context7:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/context7/index.js')],
+                    env: {
+                        CONTEXT7_API_KEY: server.config.apiKey || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.SequentialThinking:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/sequential-thinking/index.js')],
+                    env: {
+                        SEQUENTIAL_THINKING_API_KEY: server.config.apiKey || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.Firecrawl:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/firecrawl/index.js')],
+                    env: {
+                        FIRECRAWL_API_KEY: server.config.apiKey || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.FileSystem:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/filesystem/index.js')],
+                    env: {
+                        FILESYSTEM_ROOT_PATH: server.config.rootPath || process.cwd(),
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.Browser:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/browser/index.js')],
+                    env: {
+                        BROWSER_API_KEY: server.config.apiKey || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.Figma:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/figma/index.js')],
+                    env: {
+                        FIGMA_API_KEY: server.config.apiKey || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.Supabase:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/supabase/index.js')],
+                    env: {
+                        SUPABASE_API_KEY: server.config.apiKey || '',
+                        SUPABASE_PROJECT_URL: server.config.projectUrl || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.Vercel:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/vercel/index.js')],
+                    env: {
+                        VERCEL_API_KEY: server.config.apiKey || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.Sentry:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/sentry/index.js')],
+                    env: {
+                        SENTRY_API_KEY: server.config.apiKey || '',
+                        SENTRY_ORGANIZATION_SLUG: server.config.organizationSlug || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.Taskmaster:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/taskmaster/index.js')],
+                    env: {
+                        TASKMASTER_API_KEY: server.config.apiKey || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.DesktopCommander:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/desktop-commander/index.js')],
+                    env: {
+                        DESKTOP_COMMANDER_API_KEY: server.config.apiKey || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            case ServiceType.Dev21:
+                return {
+                    ...baseConfig,
+                    command: 'node',
+                    args: [path.join(outPath, 'mcp-servers/21st-dev/index.js')],
+                    env: {
+                        DEV21_API_KEY: server.config.apiKey || '',
+                        MCP_MODE: 'stdio'
+                    }
+                };
+
+            default:
+                return baseConfig;
+        }
+    }
+
+    private async writeClineSettings(settings: ClineMcpSettings): Promise<void> {
+        try {
+            // Ensure directory exists
+            const dir = path.dirname(this.clineSettingsPath);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+
+            // Write settings with proper formatting
+            const settingsContent = JSON.stringify(settings, null, 2);
+            fs.writeFileSync(this.clineSettingsPath, settingsContent, 'utf8');
+            
+            console.log('Cline MCP settings updated successfully');
+        } catch (error) {
+            console.error('Failed to write Cline settings:', error);
+            throw error;
         }
     }
 
     private updateStatusBar(): void {
-        if (this.config.enabled) {
-            this.statusBarItem.text = '$(plug) Cline Connected';
-            this.statusBarItem.tooltip = 'Cline integration is active';
+        const connectedServers = this.mcpManager.getAllServers()
+            .filter(s => s.status === ServerStatus.Connected)
+            .length;
+
+        if (connectedServers > 0) {
+            this.statusBarItem.text = `$(plug) DevHub: ${connectedServers} MCP servers`;
+            this.statusBarItem.tooltip = `${connectedServers} DevHub MCP servers available in Cline`;
             this.statusBarItem.color = '#4CAF50';
         } else {
-            this.statusBarItem.text = '$(plug) Cline Disconnected';
-            this.statusBarItem.tooltip = 'Cline integration is disabled';
+            this.statusBarItem.text = '$(plug) DevHub: No MCP servers';
+            this.statusBarItem.tooltip = 'No DevHub MCP servers connected';
             this.statusBarItem.color = undefined;
         }
     }
 
-    public async showConfigurationDialog(): Promise<void> {
+    public async syncAllConnectedServers(): Promise<void> {
         try {
-            const action = await vscode.window.showQuickPick(
-                [
-                    { label: 'Enable Integration', description: 'Connect to Cline server' },
-                    { label: 'Disable Integration', description: 'Disconnect from Cline server' },
-                    { label: 'Test Connection', description: 'Test current connection' },
-                    { label: 'View Status', description: 'Show current integration status' }
-                ],
-                {
-                    placeHolder: 'Select Cline integration action'
-                }
+            const connectedServers = this.mcpManager.getAllServers()
+                .filter(s => s.status === ServerStatus.Connected);
+
+            for (const server of connectedServers) {
+                await this.addServerToClineSettings(server.id);
+            }
+
+            vscode.window.showInformationMessage(
+                `✅ Synced ${connectedServers.length} connected servers to Cline`
             );
-
-            if (!action) {
-                return;
-            }
-
-            switch (action.label) {
-                case 'Enable Integration':
-                    await this.enableIntegrationDialog();
-                    break;
-                case 'Disable Integration':
-                    this.disableIntegration();
-                    break;
-                case 'Test Connection':
-                    await this.testCurrentConnection();
-                    break;
-                case 'View Status':
-                    this.showStatus();
-                    break;
-            }
         } catch (error) {
-            vscode.window.showErrorMessage(`Error in Cline configuration: ${error}`);
+            console.error('Failed to sync servers to Cline:', error);
+            vscode.window.showErrorMessage(
+                `Failed to sync servers to Cline: ${error}`
+            );
         }
     }
 
-    private async enableIntegrationDialog(): Promise<void> {
+    public async showClineSettingsStatus(): Promise<void> {
         try {
-            const serverUrl = await vscode.window.showInputBox({
-                placeHolder: 'https://your-cline-server.com',
-                prompt: 'Enter Cline server URL',
-                value: this.config.serverUrl || ''
-            });
-
-            if (!serverUrl) {
+            let settings: ClineMcpSettings;
+            try {
+                const settingsContent = fs.readFileSync(this.clineSettingsPath, 'utf8');
+                settings = JSON.parse(settingsContent);
+            } catch (error) {
+                vscode.window.showInformationMessage('Cline MCP settings file not found');
                 return;
             }
 
-            const apiKey = await vscode.window.showInputBox({
-                placeHolder: 'Your API key',
-                prompt: 'Enter Cline API key',
-                password: true,
-                value: this.config.apiKey || ''
-            });
+            const devhubServers = Object.keys(settings.mcpServers)
+                .filter(key => key.startsWith('devhub-'))
+                .map(key => ({
+                    name: key.replace('devhub-', ''),
+                    config: settings.mcpServers[key]
+                }));
 
-            if (!apiKey) {
+            if (devhubServers.length === 0) {
+                vscode.window.showInformationMessage('No DevHub MCP servers found in Cline settings');
                 return;
             }
 
-            await this.enableIntegration(serverUrl, apiKey);
+            const message = `
+DevHub MCP Servers in Cline:
+${devhubServers.map(server => `• ${server.name}`).join('\n')}
+
+Total: ${devhubServers.length} servers
+            `.trim();
+
+            vscode.window.showInformationMessage(message, 'OK');
+
         } catch (error) {
-            vscode.window.showErrorMessage(`Failed to enable integration: ${error}`);
+            console.error('Failed to show Cline settings status:', error);
+            vscode.window.showErrorMessage(
+                `Failed to show Cline settings: ${error}`
+            );
         }
-    }
-
-    private async testCurrentConnection(): Promise<void> {
-        if (!this.config.enabled || !this.config.serverUrl || !this.config.apiKey) {
-            vscode.window.showWarningMessage('Cline integration is not enabled');
-            return;
-        }
-
-        const isConnected = await this.testClineConnection(
-            this.config.serverUrl,
-            this.config.apiKey
-        );
-
-        if (isConnected) {
-            vscode.window.showInformationMessage('Cline connection test successful');
-        } else {
-            vscode.window.showErrorMessage('Cline connection test failed');
-        }
-    }
-
-    private showStatus(): void {
-        const status = this.config.enabled ? 'Enabled' : 'Disabled';
-        const serverUrl = this.config.serverUrl || 'Not configured';
-        
-        const message = `
-Cline Integration Status:
-• Status: ${status}
-• Server URL: ${serverUrl}
-• API Key: ${this.config.apiKey ? 'Configured' : 'Not configured'}
-        `.trim();
-
-        vscode.window.showInformationMessage(message, 'OK');
     }
 
     public dispose(): void {
         this.statusBarItem.dispose();
-        this.disableIntegration();
     }
 }

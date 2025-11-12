@@ -141,6 +141,10 @@ export class McpManager extends EventEmitter {
                     return false;
                 }
 
+                // Token'i server config'ine kaydet
+                server.config = { ...server.config, token: token };
+                this.saveState();
+
                 // GitHub server instance oluştur
                 this.githubServer = new GitHubMcpServer();
                 const connected = await this.githubServer.connect(token);
@@ -149,7 +153,7 @@ export class McpManager extends EventEmitter {
                     server.status = ServerStatus.Connected;
                     this.activeConnections.set(serverId, this.githubServer);
                     console.log(`Successfully connected to ${server.name}`);
-                    console.log(`Emitting serverStatusChanged event for ${serverId} with status ${ServerStatus.Connected}`);
+                    console.log(`GitHub token saved to server config: ${token.substring(0, 8)}...`);
                     this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
                     return true;
                 } else {
@@ -412,6 +416,10 @@ export class McpManager extends EventEmitter {
                     return false;
                 }
 
+                // API key'i server config'ine kaydet
+                server.config = { ...server.config, apiKey: apiKey };
+                this.saveState();
+
                 this.figmaServer = new FigmaMcpServer();
                 const connected = await this.figmaServer.connect(apiKey);
 
@@ -419,6 +427,7 @@ export class McpManager extends EventEmitter {
                     server.status = ServerStatus.Connected;
                     this.activeConnections.set(serverId, this.figmaServer);
                     console.log(`Successfully connected to ${server.name}`);
+                    console.log(`Figma API key saved to server config: ${apiKey.substring(0, 8)}...`);
                     this.emit('serverStatusChanged', { serverId, status: ServerStatus.Connected });
                     return true;
                 } else {
